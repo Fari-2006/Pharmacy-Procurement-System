@@ -227,7 +227,8 @@ const deleteSupplier = async (req, res, next) => {
       });
     }
 
-    await Supplier.findByIdAndDelete(req.params.id);
+    supplier.isActive = false;
+    await supplier.save();
 
     res.json({
       success: true,
@@ -316,7 +317,7 @@ const getSupplierPerformance = async (req, res, next) => {
 
       // Calculate total ordered units across non-cancelled POs
       let totalOrderedUnits = 0;
-      poList.filter(p => p.status !== 'Cancelled').forEach(p => {
+      poList.filter(p => ['Delivered','Partially Received','Received'].includes(p.status)).forEach(p => {
         p.items.forEach(i => {
           totalOrderedUnits += (i.quantity || 0);
         });

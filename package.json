@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node src/seed/seedData.js"
+    "seed": "node src/seed/seedData.js",
+    "test": "node tests/integration.cjs",
+    "test:ui": "node tests/run-ui.cjs",
+    "seed:suppliers": "node src/seed/seedSupplierUsers.js"
   },
   "keywords": [
     "pharmacy",
@@ -27,5 +30,12 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.0",
     "multer": "^2.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "mongodb-memory-server": "^11.3.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

@@ -18,7 +18,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_pharmacy_jwt_key_2026_xyz');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
@@ -35,8 +35,9 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    if(user.role==='supplier' && (!user.supplierCompany || !await require('../models/Supplier').exists({_id:user.supplierCompany,isActive:{$ne:false}}))) return res.status(403).json({success:false,message:'Supplier company is inactive or not linked.'});
     req.user = user;
-    next();
+    return require('./commercialFields')(req,res,next);
   } catch (error) {
     return res.status(401).json({
       success: false,

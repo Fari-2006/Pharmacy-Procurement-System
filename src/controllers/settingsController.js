@@ -54,6 +54,8 @@ const updateSettings = async (req, res, next) => {
     if (phone) settings.phone = phone;
     if (email) settings.email = email;
 
+    if (settings.approvalRequired && (settings.approvalThreshold === null || !Number.isFinite(settings.approvalThreshold) || settings.approvalThreshold <= 0)) return res.status(400).json({success:false,message:'Set a positive approval threshold before enabling approval.'});
+    settings.currencySymbol = '₹';
     await settings.save();
 
     await AuditLog.create({

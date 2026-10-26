@@ -127,6 +127,7 @@ const updateUser = async (req, res, next) => {
       user.password = password;
     }
 
+    if (user.role === 'supplier' && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
     await user.save();
 
     await AuditLog.create({
@@ -175,7 +176,9 @@ const deleteUser = async (req, res, next) => {
       });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    user.isActive = false;
+    if (user.role === 'supplier' && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
+    await user.save();
 
     await AuditLog.create({
       user: req.user._id,

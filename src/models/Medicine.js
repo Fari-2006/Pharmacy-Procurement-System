@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 
 const batchSchema = new mongoose.Schema({
+  rackLocation: String,
+  goodsReceipt: {type: mongoose.Schema.Types.ObjectId, ref: 'GoodsReceipt'},
+  returnReference: {type: mongoose.Schema.Types.ObjectId, ref: 'SupplierReturn'},
   batchNumber: {
     type: String,
     required: [true, 'Batch number is required'],
@@ -51,6 +54,7 @@ const batchSchema = new mongoose.Schema({
 
 const medicineSchema = new mongoose.Schema(
   {
+    archived: {type:Boolean, default:false},
     name: {
       type: String,
       required: [true, 'Medicine brand name is required'],
@@ -136,6 +140,7 @@ const medicineSchema = new mongoose.Schema(
     batches: [batchSchema]
   },
   {
+    optimisticConcurrency: true,
     timestamps: true
   }
 );
@@ -147,7 +152,9 @@ medicineSchema.methods.updateStockStatus = function () {
 
   this.batches.forEach(b => {
     // Check if expired
-    if (new Date(b.expiryDate) < now) {
+    if (b.status === 'quarantined') {
+      // Quarantine survives expiry until an explicit disposition.
+    } else if (new Date(b.expiryDate) <= now) {
       b.status = 'expired';
     } else if (b.quantity <= 0) {
       b.status = 'depleted';

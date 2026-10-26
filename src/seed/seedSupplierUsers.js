@@ -18,7 +18,7 @@ const Medicine    = require('../models/Medicine');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const SystemSetting = require('../models/SystemSetting');
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV !== 'development') {
   console.error('[SeedSupplierUsers] ❌ Refusing to run in production. Set NODE_ENV=development.');
   process.exit(1);
 }
@@ -159,15 +159,15 @@ const seed = async () => {
               {
                 medicine: amox._id,
                 medicineName: amox.name,
-                requestedQuantity: 200,
-                unitPrice: 4.70,
+                quantity: 200,
+                unitPrice: 4.70, lineTotal: 940,
                 taxPercent: 12
               },
               {
                 medicine: atorvastatin._id,
                 medicineName: atorvastatin.name,
-                requestedQuantity: 100,
-                unitPrice: 5.20,
+                quantity: 100,
+                unitPrice: 5.20, lineTotal: 520,
                 taxPercent: 12
               }
             ],
@@ -205,8 +205,8 @@ const seed = async () => {
               {
                 medicine: salbutamol._id,
                 medicineName: salbutamol.name,
-                requestedQuantity: 50,
-                unitPrice: 12.00,
+                quantity: 50,
+                unitPrice: 12.00, lineTotal: 600,
                 taxPercent: 5
               }
             ],

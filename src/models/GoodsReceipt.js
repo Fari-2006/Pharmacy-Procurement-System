@@ -82,6 +82,7 @@ const attachmentSchema = new mongoose.Schema({
 
 const goodsReceiptSchema = new mongoose.Schema(
   {
+    requestHash: String,
     receiptNumber: {
       type: String,
       required: true,

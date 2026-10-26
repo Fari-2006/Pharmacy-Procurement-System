@@ -73,7 +73,7 @@ userSchema.methods.generateAuthToken = function () {
       email: this.email,
       supplierCompany: this.supplierCompany || null
     },
-    process.env.JWT_SECRET || 'super_secret_pharmacy_jwt_key_2026_xyz',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };

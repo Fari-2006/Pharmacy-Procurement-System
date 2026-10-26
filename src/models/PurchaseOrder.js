@@ -173,6 +173,7 @@ const purchaseOrderSchema = new mongoose.Schema(
     }
   },
   {
+    optimisticConcurrency: true,
     timestamps: true
   }
 );
@@ -196,4 +197,13 @@ purchaseOrderSchema.methods.calculateTotals = function () {
   this.grandTotal = Number((taxable + this.taxAmount).toFixed(2));
 };
 
+purchaseOrderSchema.pre('validate', function(){
+ const seen=new Set();
+ for(const item of this.items){
+  if(!Number.isSafeInteger(item.quantity)||item.quantity<=0||!Number.isFinite(item.unitPrice)||item.unitPrice<0)this.invalidate('items','Order quantities must be positive whole units and prices nonnegative.');
+  const id=String(item.medicine);if(seen.has(id))this.invalidate('items','Combine duplicate medicine lines.');seen.add(id);
+ }
+ const proposed=new Set();
+ for(const item of this.supplierProposedChanges?.proposedItems||[]){const id=String(item.medicineId);if(proposed.has(id)||!Number.isSafeInteger(item.quantity)||item.quantity<=0||!Number.isFinite(item.unitPrice)||item.unitPrice<0)this.invalidate('supplierProposedChanges','Invalid or duplicate proposed item.');proposed.add(id);}
+});
 module.exports = mongoose.model('PurchaseOrder', purchaseOrderSchema);

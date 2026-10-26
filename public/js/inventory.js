@@ -128,8 +128,8 @@ const inventory = {
             <tr>
               <td><strong>${b.batchNumber}</strong></td>
               <td>${expiryBadge}</td>
-              <td>$${(b.costPrice || 0).toFixed(2)}</td>
-              <td><strong>$${(b.sellingPrice || 0).toFixed(2)}</strong></td>
+              <td>₹${(b.costPrice || 0).toFixed(2)}</td>
+              <td><strong>₹${(b.sellingPrice || 0).toFixed(2)}</strong></td>
               <td><strong>${b.quantity}</strong> / ${b.initialQuantity || b.quantity}</td>
               <td>${statusBadge}</td>
               <td>

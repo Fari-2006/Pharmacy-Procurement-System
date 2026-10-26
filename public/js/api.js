@@ -107,7 +107,8 @@ function showToast(message, type = 'info') {
   if (type === 'error') iconClass = 'fa-exclamation-circle';
   if (type === 'warning') iconClass = 'fa-triangle-exclamation';
 
-  toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${message}</span>`;
+  toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span></span>`;
+  toast.querySelector('span').textContent = message;
   container.appendChild(toast);
 
   setTimeout(() => {

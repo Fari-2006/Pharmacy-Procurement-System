@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { createSale, getSales, getSaleById } = require('../controllers/saleController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorizeRoles } = require('../middleware/auth');
 
-router.use(authenticate);
+router.use(authenticate, authorizeRoles('admin', 'pharmacist', 'cashier'));
 
 router.route('/')
   .get(getSales)
