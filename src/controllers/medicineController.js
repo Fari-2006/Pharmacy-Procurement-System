@@ -61,7 +61,7 @@ const getMedicines = async (req, res, next) => {
     res.json({
       success: true,
       count: medicines.length,
-      medicines
+      medicines: await require('../services/inventoryOrders')(medicines, req.user.role)
     });
   } catch (error) {
     next(error);

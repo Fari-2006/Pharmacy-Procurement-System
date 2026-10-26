@@ -61,6 +61,8 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  const filtered=await call('supplier','/purchase-orders?status=Draft');ok('supplier cannot filter into drafts',filtered.orders.length===0);
  await call('pharmacist',`/purchase-orders/${o._id}/draft`,'PUT',{items:[{medicineId:med.id,quantity:10,unitPrice:5}]});
  o=(await call('pharmacist',`/purchase-orders/${o._id}/submit`,'POST',{})).order;ok('draft submits below threshold',o.status==='Submitted');
+ const orderedCatalog=(await call('pharmacist','/medicines')).medicines.find(m=>m._id===med.id);
+ ok('inventory shows order placed without adding stock',orderedCatalog.procurementStatus==='Order Placed'&&orderedCatalog.incomingQuantity===10&&orderedCatalog.totalStock===0);
  const notices=await call('supplier','/notifications'),other=await call('supplierB','/notifications');ok('notification supplier isolation',notices.notifications.length>0&&other.notifications.length===0);
  await call('supplierB','/notifications/'+notices.notifications[0]._id+'/read','PUT',{},404);
  await call('supplierB','/purchase-orders/'+o._id,'GET',undefined,404);
@@ -77,7 +79,7 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  const exp=new Date(Date.now()+200*86400000).toISOString();
  const batch=q=>({batchNumber:'B001',expiryDate:exp,quantity:q,costPrice:15,sellingPrice:20,rackLocation:'Shelf A'});
  const receipt={receiptSubmissionKey:'receipt-1',purchaseOrderId:o._id,items:[{medicineId:med.id,deliveredQuantity:7,acceptedQuantity:6,rejectedQuantity:1,rejectionReason:'Damaged',batches:[batch(3),{...batch(3),batchNumber:'B002'}]}]};
- const r=(await call('pharmacist','/goods-receipts','POST',receipt,201));ok('partial multibatch receipt',r.orderStatus==='Partially Received'&&(await Medicine.findById(med.id)).totalStock===6);
+ const r=(await call('pharmacist','/goods-receipts','POST',receipt,201));const partialCatalog=(await call('pharmacist','/medicines')).medicines.find(m=>m._id===med.id);ok('inventory shows partially received and only remaining units pending',partialCatalog.procurementStatus==='Partially Received'&&partialCatalog.totalStock===6&&partialCatalog.incomingQuantity===4);ok('partial multibatch receipt',r.orderStatus==='Partially Received'&&(await Medicine.findById(med.id)).totalStock===6);
  const dup=await call('pharmacist','/goods-receipts','POST',receipt);ok('duplicate is idempotent',dup.isDuplicate&&(await Medicine.findById(med.id)).totalStock===6);
  await call('pharmacist','/goods-receipts','POST',{...receipt,notes:'different'},409);
  await call('pharmacist','/goods-receipts','POST',{...receipt,receiptSubmissionKey:'over',items:[{medicineId:med.id,deliveredQuantity:5,acceptedQuantity:5,rejectedQuantity:0,batches:[batch(5)]}]},400);
@@ -87,6 +89,7 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  // Both concurrent responses succeed; one is a replay. Database invariants must hold.
  ok('concurrent receipt does not duplicate stock',(await Medicine.findById(med.id)).totalStock===10&&await GR.countDocuments({receiptSubmissionKey:'receipt-2'})===1);
  ok('order fully received',(await PO.findById(o._id)).status==='Received');
+ const completeCatalog=(await call('pharmacist','/medicines')).medicines.find(m=>m._id===med.id);ok('completed order clears pending inventory status',completeCatalog.totalStock===10&&completeCatalog.incomingQuantity===0&&completeCatalog.procurementStatus===null);
  let updated=await Medicine.findById(med.id),source=updated.batches.find(b=>b.batchNumber==='B001');
  let ret=(await call('pharmacist','/returns','POST',{medicineId:med.id,batchId:String(source._id),quantity:2,reason:'Damaged / Defective'},201)).supplierReturn;
  updated=await Medicine.findById(med.id);ok('partial return quarantines only requested units',updated.totalStock===8&&updated.batches.id(source._id).quantity===1&&updated.batches.id(ret.quarantineBatchId).quantity===2);

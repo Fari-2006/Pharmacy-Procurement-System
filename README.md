@@ -127,3 +127,5 @@ The browser suite starts the same isolated fixture and checks role navigation an
 ## Limits
 
 Notifications are in-app and refreshed by polling; no background email/SMS worker. Invoice UI currently shows the latest 100 records and receipts the latest 200; the backend invoice and order APIs expose pagination. Return credits must be applied in full to one invoice with sufficient outstanding balance. Refunds and replacements are recorded resolutions, not automated bank transfers or supplier dispatch integrations. Help is guidance, not a ticketing service.
+
+Inventory lists available stock separately from pending purchase quantities. Open orders show Order Placed, Awaiting Approval, In Transit, Awaiting Verification or Partially Received as appropriate. Completed/cancelled/rejected orders do not count as pending. Admins and pharmacists can use the Order action directly on a medicine row.

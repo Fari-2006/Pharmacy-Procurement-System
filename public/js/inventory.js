@@ -42,6 +42,11 @@ const inventory = {
         statusBadge = `<span class="badge badge-warning">Low Stock (&le; ${med.reorderLevel})</span>`;
       }
 
+      if (med.incomingQuantity > 0) {
+        const label=String(med.procurementStatus||'Order Placed').replace(/[<>&"']/g,'');
+        statusBadge=`<span class="badge badge-info">${label}</span><div style="font-size:0.75rem;margin-top:6px;">${med.incomingQuantity} ${med.unit} pending</div><small class="text-muted">${med.totalStock>0 ? med.totalStock+' available now' : 'No stock received yet'}</small>`;
+      }
+
       const activeBatchesCount = med.batches.filter(b => b.status === 'active' && b.quantity > 0).length;
 
       return `
@@ -68,6 +73,7 @@ const inventory = {
                 <i class="fa-solid fa-list-check"></i>
               </button>
               ${isAdminOrPharmacist ? `
+                <button class="btn btn-secondary btn-sm" onclick="inventory.placeOrder('${med._id}')" title="Place Supplier Order">Order</button>
                 <button class="btn btn-primary btn-sm" onclick="inventory.openAddBatchModal('${med._id}')" title="Add Stock/Batch">
                   <i class="fa-solid fa-plus"></i>
                 </button>
@@ -85,6 +91,12 @@ const inventory = {
         </tr>
       `;
     }).join('');
+  },
+
+  async placeOrder(medicineId) {
+    const medicine=this.medicines.find(m=>m._id===medicineId);
+    if(!medicine)return;
+    try {await procurement.editOrder(null,{id:medicineId,quantity:Math.max(medicine.reorderLevel-medicine.totalStock-(medicine.incomingQuantity||0),1)});} catch(error){showToast(error.message,'error');}
   },
 
   async viewBatches(medicineId) {
