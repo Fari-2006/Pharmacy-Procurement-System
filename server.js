@@ -8,6 +8,8 @@ const errorHandler = require('./src/middleware/errorHandler');
 // Load environment variables
 dotenv.config();
 
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('Set JWT_SECRET to at least 32 characters in .env');
+
 // Connect to MongoDB
 connectDB();
 
@@ -19,6 +21,17 @@ app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS
 app.use(cors());
+
+// Only these fixed application-owned pages allow hidden ancestor directories
+// (for example Antigravity's .gemini workspace). Static assets still deny dotfiles.
+const publicPage = filename => (req, res) => res.sendFile(
+  path.join(__dirname, 'public', filename), { dotfiles: 'allow' }
+);
+app.get(['/', '/home'], publicPage('home.html'));
+app.get('/login', publicPage('login.html'));
+app.get(['/register', '/registration'], publicPage('register.html'));
+app.get('/app', publicPage('index.html'));
+app.get('/index.html', (req,res) => res.redirect('/app'));
 
 // Serve Static Frontend Assets
 app.use(express.static(path.join(__dirname, 'public')));
@@ -33,7 +46,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve uploaded files (attachments)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', (req, res) => res.status(404).json({success:false, message:'Use authenticated attachment downloads.'}));
+app.get('/api/config', (req,res) => res.json({demoEnabled: process.env.NODE_ENV === 'development'}));
 
 // Mount API Routes
 app.use('/api/auth', require('./src/routes/authRoutes'));
@@ -50,10 +64,12 @@ app.use('/api/returns', require('./src/routes/supplierReturnRoutes'));
 app.use('/api/supplier-invoices', require('./src/routes/supplierInvoiceRoutes'));
 app.use('/api/attachments', require('./src/routes/attachmentRoutes'));
 
+app.get('/api/procurement-audit', require('./src/middleware/auth').authenticate, require('./src/middleware/auth').authorizeRoles('admin'), async(req,res,next)=>{try{const logs=await require('./src/models/AuditLog').find().sort({createdAt:-1}).limit(200);res.json({success:true,logs})}catch(e){next(e)}});
+
 // Fallback to SPA index.html for non-API client routes
 app.use((req, res) => {
   if (req.method === 'GET' && !req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'), { dotfiles: 'allow' });
   } else {
     res.status(404).json({ success: false, message: 'API Endpoint not found' });
   }

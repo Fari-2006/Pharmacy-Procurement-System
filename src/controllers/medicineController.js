@@ -11,7 +11,7 @@ const Supplier = require('../models/Supplier');
 const getMedicines = async (req, res, next) => {
   try {
     const { search, category, status, sort } = req.query;
-    let query = {};
+    let query = {archived: {$ne:true}};
 
     // Search by name, genericName, or manufacturer
     if (search && search.trim() !== '') {
@@ -47,7 +47,7 @@ const getMedicines = async (req, res, next) => {
     medicines.forEach(med => {
       let changed = false;
       med.batches.forEach(b => {
-        if (new Date(b.expiryDate) < now && b.status !== 'expired') {
+        if (new Date(b.expiryDate) < now && !['expired','quarantined'].includes(b.status)) {
           b.status = 'expired';
           changed = true;
         }
@@ -400,7 +400,8 @@ const deleteMedicine = async (req, res, next) => {
       });
     }
 
-    await Medicine.findByIdAndDelete(req.params.id);
+    medicine.archived = true;
+    await medicine.save();
 
     await AuditLog.create({
       user: req.user._id,
@@ -429,7 +430,7 @@ const getAlerts = async (req, res, next) => {
     const settings = await SystemSetting.getSettings();
     const expiryWindow = Number(expiryDays) || settings.defaultExpiryAlertDays || 60;
 
-    const medicines = await Medicine.find().populate('batches.supplier', 'name returnPolicy').lean();
+    const medicines = await Medicine.find({archived:{$ne:true}}).populate('batches.supplier', 'name returnPolicy leadTimeDays safetyStockDays').lean();
     const now = new Date();
     const expiryHorizon = new Date(now.getTime() + expiryWindow * 24 * 60 * 60 * 1000);
 
@@ -507,7 +508,7 @@ const getAlerts = async (req, res, next) => {
                 name: b.supplier.name,
                 acceptsNearExpiryReturns: b.supplier.returnPolicy?.acceptsNearExpiryReturns !== false
               } : null,
-              isEligibleForReturn: true,
+              isEligibleForReturn: false,
               daysExpired: Math.ceil((now - exp) / (1000 * 60 * 60 * 24))
             });
           }
@@ -519,7 +520,7 @@ const getAlerts = async (req, res, next) => {
             const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
             const supplierPolicy = b.supplier?.returnPolicy;
             const minDays = supplierPolicy?.minimumDaysBeforeExpiry || 45;
-            const returnEligible = supplierPolicy ? (supplierPolicy.acceptsNearExpiryReturns && daysLeft >= minDays) : true;
+            const returnEligible = supplierPolicy ? (supplierPolicy.acceptsNearExpiryReturns && daysLeft >= minDays) : false;
 
             expiringSoonBatches.push({
               medicineId: med._id,
@@ -555,12 +556,13 @@ const getAlerts = async (req, res, next) => {
       let explanation = '';
 
       if (dailySalesRate > 0) {
-        const leadDays = 5;
-        const safetyDays = 7;
+        const preferred = med.batches.find(b=>b.supplier)?.supplier;
+        const leadDays = preferred?.leadTimeDays ?? 5;
+        const safetyDays = preferred?.safetyStockDays ?? 7;
         targetStock = Math.ceil(dailySalesRate * (leadDays + safetyDays));
         targetStock = Math.max(targetStock, med.reorderLevel || 20);
         const suggested = Math.max(targetStock - usableStock - incomingQty, 0);
-        explanation = `Avg sales ${dailySalesRate.toFixed(1)}/day × 12d lead+safety buffer (target: ${targetStock}) - usable stock (${usableStock}) - incoming PO (${incomingQty}) = ${suggested} units`;
+        explanation = `Avg sales ${dailySalesRate.toFixed(1)}/day × ${leadDays+safetyDays}d lead+safety buffer (target: ${targetStock}) - usable stock (${usableStock}) - incoming PO (${incomingQty}) = ${suggested} units`;
       } else {
         targetStock = Math.max((med.reorderLevel || 20) * 2, 30);
         const suggested = Math.max(targetStock - usableStock - incomingQty, 0);

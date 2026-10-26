@@ -45,7 +45,7 @@ const salesHistory = {
             ${s.customerPhone ? `<small class="text-muted">${s.customerPhone}</small>` : ''}
           </td>
           <td><span class="badge badge-gray">${s.items.length} item(s)</span></td>
-          <td><strong>$${s.grandTotal.toFixed(2)}</strong></td>
+          <td><strong>₹${s.grandTotal.toFixed(2)}</strong></td>
           <td><span class="badge ${payBadge}">${s.paymentMethod.toUpperCase()}</span></td>
           <td>${s.dispensedBy?.name || 'Staff'}</td>
           <td><small class="text-muted">${new Date(s.createdAt).toLocaleString()}</small></td>

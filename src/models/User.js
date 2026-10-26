@@ -31,6 +31,8 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'pharmacist', 'cashier', 'supplier'],
       default: 'pharmacist'
     },
+    registrationStatus: {type:String, enum:['pending','approved','rejected'], default:'approved'},
+    requestedCompanyName: {type:String, trim:true, maxlength:150},
     supplierCompany: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Supplier',
@@ -73,7 +75,7 @@ userSchema.methods.generateAuthToken = function () {
       email: this.email,
       supplierCompany: this.supplierCompany || null
     },
-    process.env.JWT_SECRET || 'super_secret_pharmacy_jwt_key_2026_xyz',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };

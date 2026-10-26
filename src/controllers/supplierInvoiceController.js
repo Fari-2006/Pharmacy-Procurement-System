@@ -1,3 +1,5 @@
+const {atomic,fail,number,audit}=require('../services/workflow');
+const SupplierReturn=require('../models/SupplierReturn');
 const SupplierInvoice = require('../models/SupplierInvoice');
 const Supplier = require('../models/Supplier');
 const AuditLog = require('../models/AuditLog');
@@ -8,6 +10,7 @@ const { sendNotification } = require('./notificationController');
 // @access  Private (Pharmacist, Admin)
 const createInvoice = async (req, res, next) => {
   try {
+    await SupplierInvoice.init();
     const {
       supplierId,
       invoiceNumber,
@@ -45,7 +48,14 @@ const createInvoice = async (req, res, next) => {
       });
     }
 
-    const itemsTot = Number(Number(itemsTotal).toFixed(2));
+    const poIds=Array.isArray(purchaseOrderIds)?purchaseOrderIds:purchaseOrderIds?[purchaseOrderIds]:[];
+    const grIds=Array.isArray(goodsReceiptIds)?goodsReceiptIds:goodsReceiptIds?[goodsReceiptIds]:[];
+    if(!poIds.length)fail('Link at least one purchase order.');
+    for(const id of poIds)if(!await require('../models/PurchaseOrder').exists({_id:id,supplier:supplierId}))fail('Linked order belongs to a different supplier or does not exist.');
+    for(const id of grIds)if(!await require('../models/GoodsReceipt').exists({_id:id,supplier:supplierId,purchaseOrder:{$in:poIds}}))fail('Receipt does not belong to linked order and supplier.');
+    if(!Number.isFinite(+new Date(dueDate))||(invoiceDate&&!Number.isFinite(+new Date(invoiceDate))))fail('Invalid invoice dates.');
+    const itemsTot = number(itemsTotal,'invoice amount',{positive:true});
+    number(taxAmount,'tax');
     const taxAmt = Number(Number(taxAmount || 0).toFixed(2));
     const totalAmount = Number((itemsTot + taxAmt).toFixed(2));
 
@@ -260,16 +270,17 @@ const applyCreditNote = async (req, res, next) => {
       });
     }
 
-    invoice.creditNotesApplied = Number(((invoice.creditNotesApplied || 0) + creditAmt).toFixed(2));
-    invoice.recalculateBalance();
-    await invoice.save();
-
-    await AuditLog.create({
-      user: req.user._id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'PAYMENT_RECORDED',
-      details: `Applied credit note ${creditNoteReference} for ₹${creditAmt} to invoice ${invoice.invoiceNumber}. New balance: ₹${invoice.balanceDue}`
+    await atomic(async session=>{
+      const current=await SupplierInvoice.findById(invoice._id).session(session);
+      const ret=await SupplierReturn.findOne({supplier:current.supplier,creditNoteReference,status:'Resolved',resolution:'Credit Note',creditAppliedTo:null}).session(session);
+      if(!ret)fail('Credit must reference an unused resolved return for the same supplier.');
+      if(creditAmt!==Number(ret.totalValue.toFixed(2))||creditAmt>current.balanceDue)fail('Apply the full return credit within the outstanding invoice balance.');
+      current.appliedCredits.push({returnId:ret._id,reference:creditNoteReference,amount:creditAmt});
+      current.creditNotesApplied=Number((current.creditNotesApplied+creditAmt).toFixed(2));
+      current.recalculateBalance();ret.creditAppliedTo=current._id;
+      await current.save({session});await ret.save({session});
+      await audit(req,'PAYMENT_RECORDED','Applied return credit '+creditNoteReference+' to '+current.invoiceNumber,session);
+      invoice.set(current.toObject());
     });
 
     res.json({

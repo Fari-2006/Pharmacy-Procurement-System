@@ -502,8 +502,8 @@ const appRouter = {
 window.appRouter = appRouter;
 
 // Initialize on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-  auth.init();
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!await auth.init()) return;
   pos.init();
   appRouter.init();
 

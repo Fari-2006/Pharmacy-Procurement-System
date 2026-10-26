@@ -42,7 +42,7 @@ const usersManager = {
           <td><span class="role-badge ${roleBadge}">${u.role.toUpperCase()}</span></td>
           <td>${u.phone || '-'}</td>
           <td>
-            ${u.isActive ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Deactivated</span>'}
+            ${u.registrationStatus === 'pending' ? '<span class="badge badge-warning">Pending Approval</span>' : u.isActive ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Deactivated</span>'}
           </td>
           <td>
             <div style="display:flex; gap:6px;">
@@ -78,6 +78,10 @@ const usersManager = {
     document.getElementById('editUserActive').checked = Boolean(u.isActive);
     document.getElementById('editUserPassword').value = '';
 
+    let request=document.getElementById('registrationRequestDetails');
+    if(!request){request=document.createElement('p');request.id='registrationRequestDetails';request.className='proc-warning';document.getElementById('editUserForm').prepend(request);}
+    request.textContent = u.registrationStatus==='pending' ? 'Registration request: '+u.role+(u.requestedCompanyName?' · Company: '+u.requestedCompanyName:'')+'. Review the details and check Account Active to approve. The registered company is linked automatically.' : '';
+    request.hidden = u.registrationStatus!=='pending';
     document.getElementById('editUserModal').classList.add('active');
   },
 

@@ -1,3 +1,4 @@
+const {number,serial}=require('../services/workflow');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Medicine = require('../models/Medicine');
 const Supplier = require('../models/Supplier');
@@ -7,19 +8,7 @@ const OrderDiscussion = require('../models/OrderDiscussion');
 const { sendNotification } = require('./notificationController');
 
 // Helper to generate unique concurrency-safe PO number
-const generatePONumber = async () => {
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  let isUnique = false;
-  let poNumber = '';
-
-  while (!isUnique) {
-    const randomHex = Math.floor(1000 + Math.random() * 9000);
-    poNumber = `PO-${dateStr}-${randomHex}`;
-    const exists = await PurchaseOrder.exists({ poNumber });
-    if (!exists) isUnique = true;
-  }
-  return poNumber;
-};
+const generatePONumber = async () => serial('PO');
 
 // @desc    Get all purchase orders with role & supplier scoping
 // @route   GET /api/purchase-orders
@@ -42,9 +31,11 @@ const getPurchaseOrders = async (req, res, next) => {
     }
 
     if (status && status !== 'all') {
+      if(req.user.role==='supplier' && ['Draft','Pending Admin Approval'].includes(status)) return res.json({success:true,orders:[],total:0,pages:0,page:1});
       query.status = status;
     }
 
+    if(req.query.tracking==='true') query.status={$in:['Accepted','Packed','Dispatched','Delivered','Partially Received']};
     if (search && search.trim() !== '') {
       const regex = new RegExp(search.trim(), 'i');
       query.$or = [
@@ -141,8 +132,8 @@ const createPurchaseOrder = async (req, res, next) => {
         return res.status(400).json({ success: false, message: `Medicine not found for ID: ${item.medicineId}` });
       }
 
-      const qty = Number(item.quantity);
-      const price = Number(item.unitPrice);
+      const qty = number(item.quantity,'quantity',{integer:true,positive:true});
+      const price = number(item.unitPrice,'unit price');
       if (qty <= 0 || price < 0) {
         return res.status(400).json({ success: false, message: `Invalid quantity or price for ${med.name}` });
       }
@@ -162,10 +153,10 @@ const createPurchaseOrder = async (req, res, next) => {
       });
     }
 
-    const discPct = Math.min(Math.max(Number(discountPercent) || 0, 0), 100);
+    const discPct = number(discountPercent,'discount'); if(discPct>100) return res.status(400).json({success:false,message:'Discount must be between 0 and 100.'});
     const discAmount = Number(((itemsTotal * discPct) / 100).toFixed(2));
     const taxable = itemsTotal - discAmount;
-    const taxPct = Math.max(Number(taxPercent) || 0, 0);
+    const taxPct = number(taxPercent,'tax');
     const taxAmt = Number(((taxable * taxPct) / 100).toFixed(2));
     const grandTotal = Number((taxable + taxAmt).toFixed(2));
 
@@ -275,13 +266,14 @@ const editDraftPurchaseOrder = async (req, res, next) => {
     }
 
     if (items && Array.isArray(items)) {
+      if(!items.length) return res.status(400).json({success:false,message:'At least one item is required.'});
       const processed = [];
       let total = 0;
       for (const item of items) {
         const med = await Medicine.findById(item.medicineId || item.medicine);
-        if (!med) continue;
-        const qty = Number(item.quantity) || 1;
-        const price = Number(item.unitPrice) || 0;
+        if (!med) return res.status(400).json({success:false,message:'Medicine not found.'});
+        const qty = number(item.quantity,'quantity',{integer:true,positive:true});
+        const price = number(item.unitPrice,'unit price');
         const line = Number((qty * price).toFixed(2));
         total += line;
         processed.push({
@@ -299,8 +291,8 @@ const editDraftPurchaseOrder = async (req, res, next) => {
       po.itemsTotal = total;
     }
 
-    if (discountPercent !== undefined) po.discountPercent = Number(discountPercent);
-    if (taxPercent !== undefined) po.taxPercent = Number(taxPercent);
+    if (discountPercent !== undefined) {po.discountPercent = number(discountPercent,'discount');if(po.discountPercent>100)return res.status(400).json({success:false,message:'Discount cannot exceed 100.'});}
+    if (taxPercent !== undefined) po.taxPercent = number(taxPercent,'tax');
     if (expectedDeliveryDate) po.expectedDeliveryDate = new Date(expectedDeliveryDate);
     if (notes !== undefined) po.notes = notes;
 
@@ -406,7 +398,7 @@ const cancelPurchaseOrder = async (req, res, next) => {
     if (!po) return res.status(404).json({ success: false, message: 'Order not found.' });
 
     // Cancellation guard: Not allowed if already dispatched, delivered, or received
-    if (['Dispatched', 'Delivered', 'Partially Received', 'Received'].includes(po.status)) {
+    if (['Dispatched', 'Delivered', 'Partially Received', 'Received', 'Rejected', 'Cancelled'].includes(po.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot cancel order in '${po.status}' stage. Order is already in transit or received.`
@@ -634,10 +626,10 @@ const proposeChanges = async (req, res, next) => {
     if (proposedItems && Array.isArray(proposedItems)) {
       for (const pItem of proposedItems) {
         const origItem = po.items.find(i => i.medicine.toString() === (pItem.medicineId || pItem.medicine).toString());
-        if (!origItem) continue;
+        if (!origItem) return res.status(400).json({success:false,message:'Proposed medicine is not in the order.'});
 
-        const qty = Number(pItem.quantity) || origItem.quantity;
-        const price = Number(pItem.unitPrice) || origItem.unitPrice;
+        const qty = pItem.quantity===undefined?origItem.quantity:number(pItem.quantity,'proposed quantity',{integer:true,positive:true});
+        const price = pItem.unitPrice===undefined?origItem.unitPrice:number(pItem.unitPrice,'proposed price');
         const lineTotal = Number((qty * price).toFixed(2));
 
         validatedProposedItems.push({
@@ -816,9 +808,9 @@ const reviewProposedChanges = async (req, res, next) => {
 // @access  Private (Supplier, Admin)
 const updateShippingProgress = async (req, res, next) => {
   try {
-    const { stage, carrier, trackingReference, notes } = req.body;
+    const { stage, carrier, trackingReference, notes, expectedDeliveryDate } = req.body;
     // stage: 'packed', 'dispatched', 'delivered'
-    if (!stage || !['packed', 'dispatched', 'delivered'].includes(stage)) {
+    if (!stage || !['packed', 'dispatched', 'delivered', 'delay'].includes(stage)) {
       return res.status(400).json({ success: false, message: 'Stage must be "packed", "dispatched", or "delivered".' });
     }
 
@@ -831,8 +823,15 @@ const updateShippingProgress = async (req, res, next) => {
 
     const now = new Date();
 
+    if(stage==='delay'){
+      if(!['Accepted','Packed','Dispatched','Partially Received'].includes(po.status)||!notes?.trim()||!Number.isFinite(+new Date(expectedDeliveryDate))) return res.status(400).json({success:false,message:'Provide a revised date and reason for an in-progress order.'});
+      po.expectedDeliveryDate=new Date(expectedDeliveryDate);po.shippingDetails.notes=notes;
+      po.statusHistory.push({status:po.status,changedBy:req.user._id,changedByName:req.user.name,reason:'Delivery delayed: '+notes});
+      await po.save();await sendNotification({recipientRole:'pharmacist',title:'Delivery delayed',message:po.poNumber+': '+notes,link:String(po._id),type:'delivery'});
+      return res.json({success:true,order:po});
+    }
     if (stage === 'packed') {
-      if (!['Accepted', 'Changes Proposed'].includes(po.status)) {
+      if (!['Accepted'].includes(po.status)) {
         return res.status(400).json({ success: false, message: `Cannot mark packed from '${po.status}' stage.` });
       }
       po.status = 'Packed';
@@ -845,12 +844,12 @@ const updateShippingProgress = async (req, res, next) => {
         reason: 'Consignment packed and staged for courier handover.'
       });
     } else if (stage === 'dispatched') {
-      if (!['Packed', 'Accepted'].includes(po.status)) {
+      if (!['Packed'].includes(po.status)) {
         return res.status(400).json({ success: false, message: `Cannot dispatch from '${po.status}' stage.` });
       }
       po.status = 'Dispatched';
-      po.shippingDetails.carrier = carrier || po.shippingDetails.carrier || 'Express Logistics';
-      po.shippingDetails.trackingReference = trackingReference || po.shippingDetails.trackingReference || 'TRK-' + Date.now();
+      po.shippingDetails.carrier = carrier || po.shippingDetails.carrier || '';
+      po.shippingDetails.trackingReference = trackingReference || po.shippingDetails.trackingReference || '';
       po.shippingDetails.dispatchedAt = now;
       if (notes) po.shippingDetails.notes = notes;
 
@@ -871,7 +870,7 @@ const updateShippingProgress = async (req, res, next) => {
         type: 'delivery'
       });
     } else if (stage === 'delivered') {
-      if (!['Dispatched', 'Packed'].includes(po.status)) {
+      if (!['Dispatched'].includes(po.status)) {
         return res.status(400).json({ success: false, message: `Cannot mark delivered from '${po.status}' stage.` });
       }
       po.status = 'Delivered';

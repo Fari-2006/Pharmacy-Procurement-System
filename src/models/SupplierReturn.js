@@ -12,6 +12,9 @@ const attachmentSchema = new mongoose.Schema({
 
 const supplierReturnSchema = new mongoose.Schema(
   {
+    sourceBatchId: mongoose.Schema.Types.ObjectId,
+    quarantineBatchId: mongoose.Schema.Types.ObjectId,
+    creditAppliedTo: {type: mongoose.Schema.Types.ObjectId, ref:'SupplierInvoice'},
     returnNumber: {
       type: String,
       required: true,
@@ -103,6 +106,7 @@ const supplierReturnSchema = new mongoose.Schema(
     attachments: [attachmentSchema]
   },
   {
+    optimisticConcurrency: true,
     timestamps: true
   }
 );

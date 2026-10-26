@@ -22,6 +22,7 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 
 router.use(authenticate);
 
+router.get('/summary', authorizeRoles('admin','pharmacist','supplier'), require('../controllers/portalController').summary);
 // Duplicate PO warning check
 router.get('/check-open', authorizeRoles('admin', 'pharmacist'), checkOpenPOs);
 
@@ -30,6 +31,13 @@ router.route('/')
   .get(authorizeRoles('admin', 'pharmacist', 'supplier'), getPurchaseOrders)
   .post(authorizeRoles('admin', 'pharmacist'), createPurchaseOrder);
 
+router.use('/:id', async (req,res,next)=>{try{
+ if(req.user.role==='supplier'){
+  const order=await PurchaseOrder.findOne({_id:req.params.id,supplier:req.user.supplierCompany,status:{$nin:['Draft','Pending Admin Approval']}});
+  if(!order)return res.status(404).json({success:false,message:'Order not found.'});
+ }
+ next();
+}catch(e){next(e)}});
 // Single PO detail
 router.route('/:id')
   .get(authorizeRoles('admin', 'pharmacist', 'supplier'), getPurchaseOrderById);
@@ -52,41 +60,5 @@ router.put('/:id/shipping', authorizeRoles('supplier', 'admin'), updateShippingP
 router.route('/:id/discussion')
   .get(authorizeRoles('admin', 'pharmacist', 'supplier'), getDiscussionMessages)
   .post(authorizeRoles('admin', 'pharmacist', 'supplier'), addDiscussionMessage);
-
-// Upload order attachment
-router.post('/:id/attachments', authorizeRoles('admin', 'pharmacist', 'supplier'), upload.single('attachment'), async (req, res, next) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
-    }
-
-    const po = await PurchaseOrder.findById(req.params.id);
-    if (!po) return res.status(404).json({ success: false, message: 'Order not found.' });
-
-    if (req.user.role === 'supplier' && (!req.user.supplierCompany || po.supplier.toString() !== req.user.supplierCompany.toString())) {
-      return res.status(403).json({ success: false, message: 'Forbidden.' });
-    }
-
-    po.attachments.push({
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      path: req.file.path,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      uploadedBy: req.user._id,
-      uploadedAt: new Date()
-    });
-
-    await po.save();
-
-    res.json({
-      success: true,
-      message: 'Attachment uploaded successfully.',
-      attachment: po.attachments[po.attachments.length - 1]
-    });
-  } catch (error) {
-    next(error);
-  }
-});
 
 module.exports = router;

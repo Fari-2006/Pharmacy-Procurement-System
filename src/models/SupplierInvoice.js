@@ -87,6 +87,7 @@ const supplierInvoiceSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    appliedCredits: [{returnId:{type:mongoose.Schema.Types.ObjectId,ref:'SupplierReturn'},reference:String,amount:Number}],
     creditNotesApplied: {
       type: Number,
       default: 0,
@@ -116,6 +117,7 @@ const supplierInvoiceSchema = new mongoose.Schema(
     }
   },
   {
+    optimisticConcurrency: true,
     timestamps: true
   }
 );
@@ -135,10 +137,10 @@ supplierInvoiceSchema.methods.recalculateBalance = function () {
   const now = new Date();
   if (this.balanceDue <= 0) {
     this.status = 'Paid';
-  } else if (this.paidAmount > 0 || totalCredits > 0) {
-    this.status = 'Partially Paid';
   } else if (now > new Date(this.dueDate)) {
     this.status = 'Overdue';
+  } else if (this.paidAmount > 0 || totalCredits > 0) {
+    this.status = 'Partially Paid';
   } else {
     this.status = 'Unpaid';
   }

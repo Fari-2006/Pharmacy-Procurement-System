@@ -94,7 +94,7 @@ const pos = {
             <div class="pos-med-batches">
               ${hasStock ? `
                 <span class="batch-pill fefo-recommend" title="First Expired First Out recommended">
-                  <i class="fa-solid fa-star"></i> FEFO: ${primaryBatch.batchNumber} (Exp: ${new Date(primaryBatch.expiryDate).toLocaleDateString()}) - $${primaryBatch.sellingPrice.toFixed(2)}
+                  <i class="fa-solid fa-star"></i> FEFO: ${primaryBatch.batchNumber} (Exp: ${new Date(primaryBatch.expiryDate).toLocaleDateString()}) - ₹${primaryBatch.sellingPrice.toFixed(2)}
                 </span>
                 <span class="badge badge-success">${med.totalStock} in stock</span>
               ` : `
@@ -205,7 +205,7 @@ const pos = {
         <div class="cart-item">
           <div class="cart-item-name">
             <strong>${item.medicineName}</strong>
-            <div class="sub">Batch: ${item.batchNumber} &bull; $${item.unitPrice.toFixed(2)} / unit</div>
+            <div class="sub">Batch: ${item.batchNumber} &bull; ₹${item.unitPrice.toFixed(2)} / unit</div>
           </div>
           <div class="qty-counter">
             <button onclick="pos.updateCartQty(${idx}, -1)">-</button>
@@ -213,7 +213,7 @@ const pos = {
             <button onclick="pos.updateCartQty(${idx}, 1)">+</button>
           </div>
           <div style="font-weight:700; width:65px; text-align:right;">
-            $${itemSubtotal}
+            ₹${itemSubtotal}
           </div>
           <button class="btn btn-sm btn-secondary" onclick="pos.removeFromCart(${idx})" style="padding:3px 6px; color:#ef4444;" title="Remove">
             <i class="fa-solid fa-xmark"></i>
@@ -242,11 +242,11 @@ const pos = {
     }
     const changeAmount = paid >= grandTotal ? paid - grandTotal : 0;
 
-    document.getElementById('posSubtotal').textContent = `$${subtotal.toFixed(2)}`;
-    document.getElementById('posDiscountAmount').textContent = `-$${discountAmount.toFixed(2)}`;
-    document.getElementById('posTaxAmount').textContent = `+$${taxAmount.toFixed(2)}`;
-    document.getElementById('posGrandTotal').textContent = `$${grandTotal.toFixed(2)}`;
-    document.getElementById('posChangeAmount').textContent = `$${changeAmount.toFixed(2)}`;
+    document.getElementById('posSubtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('posDiscountAmount').textContent = `-₹${discountAmount.toFixed(2)}`;
+    document.getElementById('posTaxAmount').textContent = `+₹${taxAmount.toFixed(2)}`;
+    document.getElementById('posGrandTotal').textContent = `₹${grandTotal.toFixed(2)}`;
+    document.getElementById('posChangeAmount').textContent = `₹${changeAmount.toFixed(2)}`;
   },
 
   async processCheckout() {
@@ -340,8 +340,8 @@ const pos = {
                 <div style="font-size:9px; color:#555;">Batch: ${item.batchNumber} | Exp: ${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A'}</div>
               </td>
               <td style="text-align:center;">${item.quantity}</td>
-              <td style="text-align:right;">$${item.unitPrice.toFixed(2)}</td>
-              <td style="text-align:right;">$${item.subtotal.toFixed(2)}</td>
+              <td style="text-align:right;">₹${item.unitPrice.toFixed(2)}</td>
+              <td style="text-align:right;">₹${item.subtotal.toFixed(2)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -350,32 +350,32 @@ const pos = {
       <div class="receipt-totals">
         <div class="row">
           <span>Subtotal:</span>
-          <span>$${sale.subtotal.toFixed(2)}</span>
+          <span>₹${sale.subtotal.toFixed(2)}</span>
         </div>
         ${sale.discountAmount > 0 ? `
           <div class="row">
             <span>Discount (${sale.discountPercent}%):</span>
-            <span>-$${sale.discountAmount.toFixed(2)}</span>
+            <span>-₹${sale.discountAmount.toFixed(2)}</span>
           </div>
         ` : ''}
         ${sale.taxAmount > 0 ? `
           <div class="row">
             <span>Tax (${sale.taxPercent}%):</span>
-            <span>+$${sale.taxAmount.toFixed(2)}</span>
+            <span>+₹${sale.taxAmount.toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="row grand">
           <span>GRAND TOTAL:</span>
-          <span>$${sale.grandTotal.toFixed(2)}</span>
+          <span>₹${sale.grandTotal.toFixed(2)}</span>
         </div>
         <div class="row">
           <span>Amount Paid:</span>
-          <span>$${(sale.paidAmount || sale.grandTotal).toFixed(2)}</span>
+          <span>₹${(sale.paidAmount || sale.grandTotal).toFixed(2)}</span>
         </div>
         ${sale.changeAmount > 0 ? `
           <div class="row">
             <span>Change Returned:</span>
-            <span>$${sale.changeAmount.toFixed(2)}</span>
+            <span>₹${sale.changeAmount.toFixed(2)}</span>
           </div>
         ` : ''}
       </div>

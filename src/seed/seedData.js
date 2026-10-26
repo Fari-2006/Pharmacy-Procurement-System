@@ -14,16 +14,12 @@ const seed = async () => {
     console.log(`[Seed] Connecting to MongoDB: ${mongoUri}...`);
     await mongoose.connect(mongoUri);
 
-    console.log('[Seed] Clearing existing data...');
-    await User.deleteMany();
-    await Medicine.deleteMany();
-    await Supplier.deleteMany();
-    await Sale.deleteMany();
-    await AuditLog.deleteMany();
-
+    if(process.env.NODE_ENV !== 'development') throw new Error('Demo seeding requires NODE_ENV=development');
+    const existingData=await Medicine.exists({});
+    const createMissing=async(Model,query,data)=>await Model.findOne(query)||await Model.create(data);
     console.log('[Seed] Seeding Users with Role-Based Access Control...');
     // Create Users (password hashing handled by User schema pre-save hook)
-    const adminUser = await User.create({
+    const adminUser = await createMissing(User,{email:'admin@pharmacy.com'},{
       name: 'Dr. Sarah Mitchell',
       email: 'admin@pharmacy.com',
       password: 'Admin@123',
@@ -32,7 +28,7 @@ const seed = async () => {
       isActive: true
     });
 
-    const pharmacistUser = await User.create({
+    const pharmacistUser = await createMissing(User,{email:'pharmacist@pharmacy.com'},{
       name: 'James Wilson, PharmD',
       email: 'pharmacist@pharmacy.com',
       password: 'Pharma@123',
@@ -41,7 +37,7 @@ const seed = async () => {
       isActive: true
     });
 
-    const cashierUser = await User.create({
+    const cashierUser = await createMissing(User,{email:'cashier@pharmacy.com'},{
       name: 'Elena Rostova',
       email: 'cashier@pharmacy.com',
       password: 'Cashier@123',
@@ -51,7 +47,7 @@ const seed = async () => {
     });
 
     console.log('[Seed] Seeding Suppliers...');
-    const supplier1 = await Supplier.create({
+    const supplier1 = await createMissing(Supplier,{name:'Apex Healthcare Distributors'},{
       name: 'Apex Healthcare Distributors',
       contactPerson: 'Marcus Vance',
       email: 'marcus@apexhealth.com',
@@ -61,7 +57,7 @@ const seed = async () => {
       notes: 'Primary supplier for critical antibiotics and cardiological drugs'
     });
 
-    const supplier2 = await Supplier.create({
+    const supplier2 = await createMissing(Supplier,{name:'BioCare Global Pharmaceuticals'},{
       name: 'BioCare Global Pharmaceuticals',
       contactPerson: 'Sophia Chen',
       email: 'schen@biocare-pharma.com',
@@ -71,7 +67,7 @@ const seed = async () => {
       notes: 'Reliable generic drug manufacturer with fast delivery'
     });
 
-    const supplier3 = await Supplier.create({
+    const supplier3 = await createMissing(Supplier,{name:'NovaCare Generics & Surgical'},{
       name: 'NovaCare Generics & Surgical',
       contactPerson: 'David Miller',
       email: 'contact@novacarepharma.com',
@@ -392,13 +388,13 @@ const seed = async () => {
 
     const createdMedicines = [];
     for (const mData of medicinesData) {
-      const med = new Medicine(mData);
-      await med.save();
+      const med = await createMissing(Medicine,{name:mData.name},mData);
       createdMedicines.push(med);
     }
 
     console.log(`[Seed] Seeded ${createdMedicines.length} Medicines with batches.`);
 
+    if(existingData){await mongoose.disconnect();return;}
     console.log('[Seed] Seeding Initial Sales Transactions...');
     const sale1 = await Sale.create({
       invoiceNumber: 'INV-20261025-0001',

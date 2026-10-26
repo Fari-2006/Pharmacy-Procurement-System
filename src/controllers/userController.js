@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Supplier = require('../models/Supplier');
 const AuditLog = require('../models/AuditLog');
+const resolveSupplierCompany = require('../services/supplierCompany');
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/users
@@ -27,7 +28,7 @@ const getUsers = async (req, res, next) => {
 // @access  Private/Admin
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, phone, supplierCompany } = req.body;
+    const { name, email, password, role, phone, supplierCompany, companyName } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -36,10 +37,10 @@ const createUser = async (req, res, next) => {
       });
     }
 
-    if (role === 'supplier' && !supplierCompany) {
+    if (role === 'supplier' && !supplierCompany && !companyName) {
       return res.status(400).json({
         success: false,
-        message: 'Supplier accounts must be linked to a supplier company.'
+        message: 'Enter the supplier company name.'
       });
     }
 
@@ -60,13 +61,15 @@ const createUser = async (req, res, next) => {
       linkedCompany = supExists._id;
     }
 
+    if(role==='supplier' && !linkedCompany) linkedCompany=(await resolveSupplierCompany(companyName,{name,email,phone}))._id;
     const newUser = await User.create({
       name,
       email: email.toLowerCase(),
       password,
       role,
       phone,
-      supplierCompany: linkedCompany
+      supplierCompany: linkedCompany,
+      requestedCompanyName: role==='supplier' ? companyName : undefined
     });
 
     await AuditLog.create({
@@ -110,23 +113,29 @@ const updateUser = async (req, res, next) => {
     }
 
     if (name) user.name = name;
+    const pendingSupplier=user.registrationStatus==='pending' && (role||user.role)==='supplier';
     if (role) {
       user.role = role;
-      if (role === 'supplier' && supplierCompany) {
+      if (role === 'supplier' && supplierCompany && !pendingSupplier) {
         user.supplierCompany = supplierCompany;
       } else if (role !== 'supplier') {
         user.supplierCompany = null;
       }
     }
-    if (supplierCompany !== undefined && user.role === 'supplier') {
+    if (supplierCompany !== undefined && user.role === 'supplier' && !pendingSupplier) {
       user.supplierCompany = supplierCompany;
     }
     if (phone !== undefined) user.phone = phone;
-    if (isActive !== undefined) user.isActive = isActive;
+    if (isActive !== undefined) {user.isActive = isActive;if(isActive===true && user.registrationStatus==='pending') user.registrationStatus='approved';}
     if (password && password.trim().length >= 6) {
       user.password = password;
     }
 
+    if(user.role==='supplier' && user.isActive && (pendingSupplier || !user.supplierCompany)) {
+      const company=await resolveSupplierCompany(user.requestedCompanyName || req.body.companyName, {name:user.name,email:user.email,phone:user.phone});
+      user.supplierCompany=company._id;
+    }
+    if (user.role === 'supplier' && user.isActive && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany,isActive:{$ne:false}}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
     await user.save();
 
     await AuditLog.create({
@@ -175,7 +184,10 @@ const deleteUser = async (req, res, next) => {
       });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    user.isActive = false;
+    if(user.registrationStatus==='pending')user.registrationStatus='rejected';
+    if (user.role === 'supplier' && user.isActive && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany,isActive:{$ne:false}}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
+    await user.save();
 
     await AuditLog.create({
       user: req.user._id,

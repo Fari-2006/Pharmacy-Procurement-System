@@ -1,116 +1,35 @@
-// Authentication & Role-Based Access Control Module
+// Authentication for the protected workspace. Public login is at /login.
 const auth = {
   currentUser: null,
-
-  init() {
-    this.currentUser = api.getUser();
+  async init() {
+    window.addEventListener('auth:expired', () => this.showLoginModal('Your session has expired. Please log in again.'));
     this.bindEvents();
-
-    if (api.getToken() && this.currentUser) {
-      this.applyUserSession();
-    } else {
-      this.showLoginModal();
-    }
-
-    window.addEventListener('auth:expired', () => {
-      this.showLoginModal('Your session has expired. Please log in again.');
-    });
-  },
-
-  bindEvents() {
-    // Standard login form submission
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-      loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        await this.login(email, password);
-      });
-    }
-
-    // Demo One-Click Login Buttons
-    document.querySelectorAll('.btn-demo-login').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const role = e.currentTarget.dataset.role;
-        let email = '';
-        let pass = '';
-
-        if (role === 'admin') {
-          email = 'admin@pharmacy.com';
-          pass = 'Admin@123';
-        } else if (role === 'pharmacist') {
-          email = 'pharmacist@pharmacy.com';
-          pass = 'Pharma@123';
-        } else if (role === 'cashier') {
-          email = 'cashier@pharmacy.com';
-          pass = 'Cashier@123';
-        }
-
-        document.getElementById('loginEmail').value = email;
-        document.getElementById('loginPassword').value = pass;
-        await this.login(email, pass);
-      });
-    });
-
-    // Logout
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => this.logout());
-    }
-  },
-
-  async login(email, password) {
+    if (!api.getToken()) { this.showLoginModal(); return false; }
     try {
-      const res = await api.post('/auth/login', { email, password });
-      if (res.success) {
-        api.setToken(res.token);
-        api.setUser(res.user);
-        this.currentUser = res.user;
-
-        this.hideLoginModal();
-        this.applyUserSession();
-        showToast(`Welcome back, ${res.user.name}! (${res.user.role.toUpperCase()})`, 'success');
-
-        // Trigger view refresh
-        window.dispatchEvent(new CustomEvent('auth:login_success', { detail: res.user }));
-      }
+      const result = await api.get('/auth/me');
+      this.currentUser = {...result.user, id: result.user.id || result.user._id};
+      api.setUser(this.currentUser);
+      this.applyUserSession();
+      document.body.classList.add('session-ready');
+      return true;
     } catch (error) {
-      showToast(error.message || 'Login failed. Please check your credentials.', 'error');
+      this.currentUser = null;
+      api.removeToken(); api.removeUser();
+      this.showLoginModal(error.message);
+      return false;
     }
   },
-
+  bindEvents() {
+    document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
+  },
   logout() {
-    api.removeToken();
-    api.removeUser();
-    this.currentUser = null;
-    showToast('Logged out successfully.', 'info');
-    this.showLoginModal();
+    api.removeToken(); api.removeUser(); this.currentUser=null;
+    window.location.replace('/login?loggedOut=1');
   },
-
-  showLoginModal(msg) {
-    const modal = document.getElementById('loginModal');
-    if (modal) {
-      modal.classList.add('active');
-      if (msg) {
-        const alertEl = document.getElementById('loginAlertMsg');
-        if (alertEl) {
-          alertEl.textContent = msg;
-          alertEl.style.display = 'block';
-        }
-      }
-    }
+  showLoginModal(message) {
+    const query = message ? '?message=' + encodeURIComponent(message) : '';
+    window.location.replace('/login' + query);
   },
-
-  hideLoginModal() {
-    const modal = document.getElementById('loginModal');
-    if (modal) {
-      modal.classList.remove('active');
-      const alertEl = document.getElementById('loginAlertMsg');
-      if (alertEl) alertEl.style.display = 'none';
-    }
-  },
-
   applyUserSession() {
     if (!this.currentUser) return;
 

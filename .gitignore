@@ -4,3 +4,6 @@ node_modules/
 !.env.example
 uploads/attachments/
 *.log
+coverage/
+playwright-report/
+test-results/

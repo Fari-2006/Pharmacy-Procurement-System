@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { getDashboardStats } = require('../controllers/dashboardController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorizeRoles } = require('../middleware/auth');
 
-router.use(authenticate);
+router.use(authenticate, authorizeRoles('admin', 'pharmacist'));
 
 router.get('/stats', getDashboardStats);
 

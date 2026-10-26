@@ -18,8 +18,8 @@ const dashboard = {
   renderMetrics(stats) {
     document.getElementById('metricTotalMedicines').textContent = stats.totalMedicines;
     document.getElementById('metricTotalUnits').textContent = stats.totalUnits.toLocaleString();
-    document.getElementById('metricCostValuation').textContent = `$${stats.inventoryCostValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    document.getElementById('metricTodaySales').textContent = `$${stats.todayRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    document.getElementById('metricCostValuation').textContent = `₹${stats.inventoryCostValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    document.getElementById('metricTodaySales').textContent = `₹${stats.todayRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     document.getElementById('metricLowStockCount').textContent = stats.lowStockCount + stats.outOfStockCount;
     document.getElementById('metricExpiringCount').textContent = stats.expiring30DaysCount + stats.expiredBatchesCount;
 
@@ -91,7 +91,7 @@ const dashboard = {
         <td><strong>${s.invoiceNumber}</strong></td>
         <td>${s.customerName}</td>
         <td><span class="badge badge-info">${s.items.length} item(s)</span></td>
-        <td><strong>$${s.grandTotal.toFixed(2)}</strong></td>
+        <td><strong>₹${s.grandTotal.toFixed(2)}</strong></td>
         <td><small class="text-muted">${new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
       </tr>
     `).join('');

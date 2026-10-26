@@ -12,10 +12,10 @@ const {
 } = require('../controllers/medicineController');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 
-router.use(authenticate);
+router.use(authenticate, authorizeRoles('admin', 'pharmacist', 'cashier'));
 
 // Alerts route
-router.get('/alerts', getAlerts);
+router.get('/alerts', authorizeRoles('admin', 'pharmacist'), getAlerts);
 
 // Main medicine routes
 router.route('/')
