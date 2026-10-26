@@ -153,14 +153,15 @@
  const setupSupplierUsers=()=>{
   for(const prefix of ['add','edit']){
    const role=document.getElementById(prefix+'UserRole');role.add(new Option('Supplier','supplier'));
-   role.parentElement.insertAdjacentHTML('afterend',`<div class="form-group"><label class="form-label">Supplier Company (required for supplier role)</label><select id="${prefix}UserCompany" class="select-control"><option value="">Select company</option></select></div>`);
+   role.parentElement.insertAdjacentHTML('afterend',`<div class="form-group" id="${prefix}UserCompanyField" hidden><label class="form-label">${prefix==='edit'?'Registered Company':'Company Name'}</label><input id="${prefix}UserCompanyName" class="input-control" maxlength="120" ${prefix==='edit'?'readonly':''} placeholder="Enter company name"><small>${prefix==='edit'?'The company entered at registration is linked automatically on approval.':'Enter any supplier company name. A directory record is created if needed.'}</small></div>`);
+   role.addEventListener('change',()=>{document.getElementById(prefix+'UserCompanyField').hidden=role.value!=='supplier'});
   }
-  const populate=async()=>{const r=await api.get('/suppliers');for(const prefix of ['add','edit']){const select=document.getElementById(prefix+'UserCompany');select.innerHTML='<option value="">Select company</option>'+r.suppliers.map(s=>`<option value="${s._id}">${esc(s.name)}</option>`).join('');}};
-  const add=usersManager.openAddModal.bind(usersManager);usersManager.openAddModal=async()=>{await populate();add()};
-  const edit=usersManager.openEditModal.bind(usersManager);usersManager.openEditModal=async id=>{await populate();edit(id);document.getElementById('editUserCompany').value=usersManager.users.find(u=>u._id===id)?.supplierCompany?._id||''};
+  const add=usersManager.openAddModal.bind(usersManager);usersManager.openAddModal=()=>{add();document.getElementById('addUserCompanyField').hidden=document.getElementById('addUserRole').value!=='supplier'};
+  const edit=usersManager.openEditModal.bind(usersManager);usersManager.openEditModal=id=>{edit(id);const user=usersManager.users.find(u=>u._id===id);document.getElementById('editUserCompanyName').value=user?.supplierCompany?.name||user?.requestedCompanyName||'';document.getElementById('editUserCompanyField').hidden=user?.role!=='supplier'};
  };
  setupSupplierUsers();
- const post=api.post.bind(api),put=api.put.bind(api);api.post=(path,body)=>post(path,path==='/users'?{...body,supplierCompany:document.getElementById('addUserCompany').value||null}:body);api.put=(path,body)=>put(path,path.startsWith('/users/')?{...body,supplierCompany:document.getElementById('editUserCompany').value||null}:body);
+ const post=api.post.bind(api),put=api.put.bind(api);api.post=(path,body)=>post(path,path==='/users'?{...body,companyName:document.getElementById('addUserCompanyName').value}:body);
+ api.put=(path,body)=>put(path,path.startsWith('/users/')?{...body,companyName:document.getElementById('editUserCompanyName').value}:body);
  const bell=button('Notifications',()=>appRouter.navigateTo('notifications'));bell.dataset.roleRequired='admin,pharmacist,supplier';document.querySelector('.header-right').append(bell);
  const poll=async()=>{if(!api.getToken()||!auth.currentUser||auth.currentUser.role==='cashier')return;try{const r=await api.get('/notifications?limit=1');bell.textContent=`Notifications (${r.unreadCount})`}catch{}};
  P.notificationTimer=setInterval(poll,20000);window.addEventListener('auth:login_success',poll);

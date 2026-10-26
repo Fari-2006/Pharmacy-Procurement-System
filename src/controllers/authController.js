@@ -121,7 +121,7 @@ const register = async (req,res,next) => {
     if(typeof name!=='string'||!name.trim()||typeof email!=='string'||typeof password!=='string') return res.status(400).json({success:false,message:'Full name, email and password are required.'});
     if(!['pharmacist','cashier','supplier'].includes(role)) return res.status(400).json({success:false,message:'Choose Pharmacist, Cashier or Supplier. Admin accounts are managed by an administrator.'});
     if(password.length<8||password.length>128) return res.status(400).json({success:false,message:'Password must contain 8–128 characters.'});
-    if(role==='supplier' && (typeof companyName!=='string'||!companyName.trim())) return res.status(400).json({success:false,message:'Supplier company name is required.'});
+    if(role==='supplier' && (typeof companyName!=='string'||!companyName.trim()||companyName.trim().length>120)) return res.status(400).json({success:false,message:'Supplier company name is required.'});
     await User.init();
     const normalized=email.trim().toLowerCase();
     if(await User.exists({email:normalized})) return res.status(409).json({success:false,message:'This email is already registered. Please log in or contact your administrator.'});

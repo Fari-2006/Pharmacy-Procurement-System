@@ -80,7 +80,7 @@ const usersManager = {
 
     let request=document.getElementById('registrationRequestDetails');
     if(!request){request=document.createElement('p');request.id='registrationRequestDetails';request.className='proc-warning';document.getElementById('editUserForm').prepend(request);}
-    request.textContent = u.registrationStatus==='pending' ? 'Registration request: '+u.role+(u.requestedCompanyName?' · Company: '+u.requestedCompanyName:'')+'. Review the details, select a supplier company if required, and check Account Active to approve.' : '';
+    request.textContent = u.registrationStatus==='pending' ? 'Registration request: '+u.role+(u.requestedCompanyName?' · Company: '+u.requestedCompanyName:'')+'. Review the details and check Account Active to approve. The registered company is linked automatically.' : '';
     request.hidden = u.registrationStatus!=='pending';
     document.getElementById('editUserModal').classList.add('active');
   },

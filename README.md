@@ -33,7 +33,7 @@ Run `npm run dev`, then open http://localhost:5000. Express serves the frontend;
 - `/login`: a separate login page for all four roles. No popup login or demo-login bar. The account role determines the dashboard after login.
 - `/app`: the authenticated pharmacy workspace. The browser verifies the session before displaying it; missing or expired sessions return to Login. Backend APIs continue to enforce authorization.
 
-New registrations remain inactive until reviewed. Admin → Staff & Security → Edit the pending account → verify details → select/link the supplier company when applicable → enable Account Active → save. Create a supplier company in Suppliers Directory first if it does not exist. The applicant can then log in with the password they registered. Existing accounts continue to work. Administrator accounts are created by an existing admin (or the development seed for initial local setup).
+New registrations remain inactive until reviewed. Admin → Staff & Security → Edit the pending account → verify details → check the displayed registered company name → enable Account Active → save. Any company name may be entered during registration. Approval automatically creates or reuses the matching supplier company; there is no company dropdown or manual directory setup. The applicant can then log in with the password they registered. Existing accounts continue to work. Administrator accounts are created by an existing admin (or the development seed for initial local setup).
 
 ## Existing local MongoDB on Windows
 
@@ -86,7 +86,7 @@ Existing passwords are never reset by seeding. Public login pages use manual cre
 
 ## Role workflows
 
-- **Admin:** manage staff and supplier logins, link each supplier user to a company, configure optional purchase approval, approve orders, inspect audit history and procurement.
+- **Admin:** manage staff and supplier logins, automatically link each supplier user to their registered company, configure optional purchase approval, approve orders, inspect audit history and procurement.
 - **Pharmacist:** review stock/expiry alerts, create or edit drafts, submit orders, confirm proposed supplier terms, track deliveries, receive verified multi-batch quantities, request returns, record invoices/payments and apply resolved return credits.
 - **Supplier:** view only its company's dashboard, assigned orders, delivery tracking, returns, invoices, notifications and profile. Accept/reject orders, propose revisions, pack, dispatch, report delays, mark delivered and discuss orders.
 - **Cashier:** inventory lookup, POS billing and sales/receipt reprinting. Procurement and cost prices are blocked by APIs.

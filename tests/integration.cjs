@@ -43,9 +43,12 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  await call('','/auth/register','POST',{...signup,email:'supplier.request@test.com',role:'supplier'},400);
  await call('','/auth/register','POST',{...signup,email:'supplier.request@test.com',role:'supplier',companyName:'Requested Company'},201);
  const supplierRequest=await User.findOne({email:'supplier.request@test.com'});
- await call('admin','/users/'+supplierRequest.id,'PUT',{isActive:true},400);
  await call('admin','/users/'+supplierRequest.id,'PUT',{isActive:true,supplierCompany:sa.id});
- ok('supplier activation requires admin company link',(await call('','/auth/login','POST',{email:'supplier.request@test.com',password:signup.password})).user.role==='supplier');
+ const approvedSupplier=await User.findById(supplierRequest.id).populate('supplierCompany');
+ ok('approval automatically creates and links the registered company',approvedSupplier.supplierCompany.name==='Requested Company'&&String(approvedSupplier.supplierCompany._id)!==sa.id);
+ await call('admin','/users/'+supplierRequest.id,'PUT',{isActive:true});
+ ok('repeated approval does not duplicate company',await Supplier.countDocuments({companyKey:'requested company'})===1);
+ ok('supplier can log in with their registered company',(await call('','/auth/login','POST',{email:'supplier.request@test.com',password:signup.password})).user.role==='supplier');
  for(const role of ['admin','pharmacist','cashier','supplier']){const d=await call('', '/auth/login','POST',{email:role+'@test.com',password:'Test@123'});ok(role+' login',d.token);}
  for(const path of ['/purchase-orders','/goods-receipts','/returns','/supplier-invoices','/suppliers'])await call('cashier',path,'GET',undefined,403);
  for(const path of ['/sales','/dashboard/stats','/medicines'])await call('supplier',path,'GET',undefined,403);
