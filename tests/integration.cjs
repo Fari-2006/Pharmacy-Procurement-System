@@ -2,8 +2,10 @@ const assert=require('node:assert/strict');
 const {MongoMemoryReplSet}=require('mongodb-memory-server');
 const mongoose=require('mongoose');
 const {spawn}=require('node:child_process');
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const sessionFile=path.join(os.tmpdir(),'pharmacy-test-session.json');
 process.env.JWT_SECRET='integration-test-secret-with-at-least-32-characters';
-let server,mongo,base;const tokens={};let checks=0;
+let server,mongo,base,fixtureRoot;const tokens={};let checks=0;
 const ok=(label,value)=>{assert.ok(value,label);checks++;console.log('PASS',label)};
 async function call(role,path,method='GET',body,status=200){const r=await fetch(base+'/api'+path,{method,headers:{'Content-Type':'application/json',...(tokens[role]?{Authorization:'Bearer '+tokens[role]}:{})},body:body===undefined?undefined:JSON.stringify(body)});const d=await r.json();if(Array.isArray(status))assert.ok(status.includes(r.status),`${method} ${path}: ${JSON.stringify(d)}`);else assert.equal(r.status,status,`${method} ${path}: ${JSON.stringify(d)}`);return d;}
 (async()=>{
@@ -14,8 +16,19 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  for(const [role,company]of [['admin'],['pharmacist'],['cashier'],['supplier',sa],['supplierB',sb],['pharmacist2']]){const u=await User.create({name:role,email:role+'@test.com',password:'Test@123',role:role.startsWith('supplier')?'supplier':role==='pharmacist2'?'pharmacist':role,supplierCompany:company?._id});tokens[role]=u.generateAuthToken();}
  const med=await Medicine.create({name:'Test Medicine',genericName:'Generic',category:'Other',reorderLevel:10,batches:[]});
  for(const M of [User,Supplier,Medicine,PO,GR,Return,Invoice,Notification])await M.init();
- server=spawn(process.execPath,['server.js'],{env:{...process.env,MONGODB_URI:uri,PORT:'5127',NODE_ENV:'test'},stdio:['ignore','pipe','pipe']});let logs='';server.stderr.on('data',b=>logs+=b);server.stdout.on('data',b=>logs+=b);base='http://127.0.0.1:5127';
+ // Run the real application under a hidden ancestor, like the user's .gemini directory.
+ fixtureRoot=fs.mkdtempSync(path.join(os.tmpdir(),'.pharmacy-integration-'));
+ const sourceRoot=path.resolve(__dirname,'..');
+ for(const file of ['server.js','package.json','src','public'])fs.cpSync(path.join(sourceRoot,file),path.join(fixtureRoot,file),{recursive:true});
+ fs.symlinkSync(path.join(sourceRoot,'node_modules'),path.join(fixtureRoot,'node_modules'),process.platform==='win32'?'junction':'dir');
+ fs.writeFileSync(path.join(fixtureRoot,'public','.private-config'),'private-test-value');
+ server=spawn(process.execPath,['server.js'],{cwd:fixtureRoot,env:{...process.env,MONGODB_URI:uri,PORT:'5127',NODE_ENV:'test'},stdio:['ignore','pipe','pipe']});let logs='';server.stderr.on('data',b=>logs+=b);server.stdout.on('data',b=>logs+=b);base='http://127.0.0.1:5127';
  for(let i=0;i<100;i++){try{await fetch(base+'/api/health');break}catch{await new Promise(r=>setTimeout(r,100))}}
+ for(const route of ['/','/home','/login','/register','/registration','/app','/css/access.css','/js/access.js']){
+  const page=await fetch(base+route);assert.equal(page.status,200,'Hidden-directory application route '+route);
+ }
+ const privateResponse=await fetch(base+'/.private-config');assert(!(await privateResponse.text()).includes('private-test-value'));
+ ok('pages load from hidden workspace without exposing hidden static files',true);
  const signup={name:'Applicant',email:'applicant@test.com',password:'Applicant@123',role:'pharmacist',isActive:true,supplierCompany:sa.id};
  const registered=await call('','/auth/register','POST',signup,201);ok('registration does not issue a token',!registered.token);
  const applicant=await User.findOne({email:signup.email});ok('registration cannot self-activate or link a company',!applicant.isActive&&applicant.supplierCompany===null&&applicant.registrationStatus==='pending');
@@ -101,6 +114,6 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  await call('supplier','/suppliers/my-company','PUT',{contactPerson:'New Contact',phone:'1234567890'});ok('supplier company profile editable',true);
  await call('admin','/procurement-audit');ok('admin audit endpoint available',true);
  console.log(`\n${checks} grouped checks passed.`);
- if(process.env.RUN_UI==='1'){require('fs').writeFileSync('/tmp/pharmacy-test-session.json',JSON.stringify({base,tokens,uri}));await new Promise((resolve,reject)=>{const ui=spawn(process.execPath,['tests/ui.cjs'],{stdio:'inherit',env:process.env});ui.on('exit',code=>code?reject(new Error('UI checks failed')):resolve());});}
- if(process.env.KEEP_TEST_SERVER==='1'){require('fs').writeFileSync('/tmp/pharmacy-test-session.json',JSON.stringify({base,tokens,uri}));await new Promise(r=>setTimeout(r,600000));}
-})().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{if(server)server.kill();await mongoose.disconnect();if(mongo)await mongo.stop()});
+ if(process.env.RUN_UI==='1'){fs.writeFileSync(sessionFile,JSON.stringify({base,tokens,uri}));await new Promise((resolve,reject)=>{const ui=spawn(process.execPath,['tests/ui.cjs'],{stdio:'inherit',env:process.env});ui.on('exit',code=>code?reject(new Error('UI checks failed')):resolve());});}
+ if(process.env.KEEP_TEST_SERVER==='1'){fs.writeFileSync(sessionFile,JSON.stringify({base,tokens,uri}));await new Promise(r=>setTimeout(r,600000));}
+})().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{if(server&&server.exitCode===null){server.kill();await new Promise(r=>server.once('exit',r));}await mongoose.disconnect();if(mongo)await mongo.stop();if(fixtureRoot)fs.rmSync(fixtureRoot,{recursive:true,force:true})});

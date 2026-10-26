@@ -22,11 +22,15 @@ app.use(express.urlencoded({ extended: true }));
 // Enable CORS
 app.use(cors());
 
-// Public entry pages are separate from the authenticated workspace.
-app.get(['/', '/home'], (req,res) => res.sendFile(path.join(__dirname,'public','home.html')));
-app.get('/login', (req,res) => res.sendFile(path.join(__dirname,'public','login.html')));
-app.get(['/register','/registration'], (req,res) => res.sendFile(path.join(__dirname,'public','register.html')));
-app.get('/app', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
+// Only these fixed application-owned pages allow hidden ancestor directories
+// (for example Antigravity's .gemini workspace). Static assets still deny dotfiles.
+const publicPage = filename => (req, res) => res.sendFile(
+  path.join(__dirname, 'public', filename), { dotfiles: 'allow' }
+);
+app.get(['/', '/home'], publicPage('home.html'));
+app.get('/login', publicPage('login.html'));
+app.get(['/register', '/registration'], publicPage('register.html'));
+app.get('/app', publicPage('index.html'));
 app.get('/index.html', (req,res) => res.redirect('/app'));
 
 // Serve Static Frontend Assets
@@ -65,7 +69,7 @@ app.get('/api/procurement-audit', require('./src/middleware/auth').authenticate,
 // Fallback to SPA index.html for non-API client routes
 app.use((req, res) => {
   if (req.method === 'GET' && !req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'), { dotfiles: 'allow' });
   } else {
     res.status(404).json({ success: false, message: 'API Endpoint not found' });
   }

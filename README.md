@@ -22,6 +22,8 @@ JWT_EXPIRES_IN=7d
 NODE_ENV=development
 ```
 
+The app also supports folders with hidden ancestors, such as Antigravity’s `.gemini` workspace. Only known application pages and authorized attachment downloads allow those paths; hidden static files stay blocked.
+
 Run `npm run dev`, then open http://localhost:5000. Express serves the frontend; a separate Live Server is unnecessary.
 
 ## Home, registration and login

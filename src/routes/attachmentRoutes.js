@@ -29,6 +29,6 @@ router.get('/:filename',async(req,res,next)=>{try{
  if(!attachment)return res.status(404).json({message:'Attachment not found'});
  const location=path.resolve(__dirname,'../../uploads/attachments',req.params.filename);
  if(!fs.existsSync(location))return res.sendStatus(404);
- res.set('X-Content-Type-Options','nosniff');res.download(location,attachment.originalName);
+ res.set('X-Content-Type-Options','nosniff');res.download(location,attachment.originalName,{dotfiles:'allow'});
 }catch(e){next(e)}});
 module.exports=router;
