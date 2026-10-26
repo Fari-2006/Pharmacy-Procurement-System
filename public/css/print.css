@@ -1,0 +1,105 @@
+/* Print Stylesheet for Pharmacy Invoices & Receipts */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .sidebar,
+  .top-header,
+  .nav-menu,
+  .toast-container,
+  .modal-overlay:not(.print-active),
+  .modal-header,
+  .modal-footer,
+  .btn,
+  .header-btn {
+    display: none !important;
+  }
+
+  #printableReceipt,
+  #printableReceipt * {
+    visibility: visible;
+  }
+
+  #printableReceipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 80mm; /* Standard POS thermal receipt width, scales gracefully to A4 */
+    margin: 0 auto;
+    padding: 10px;
+    background: #ffffff;
+    color: #000000;
+    font-family: 'Courier New', Courier, monospace, sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .receipt-header {
+    text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .receipt-header h2 {
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .receipt-meta {
+    font-size: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 6px;
+  }
+
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+    font-size: 10px;
+  }
+
+  .receipt-table th {
+    text-align: left;
+    border-bottom: 1px solid #000;
+    padding: 3px 0;
+  }
+
+  .receipt-table td {
+    padding: 3px 0;
+    vertical-align: top;
+  }
+
+  .receipt-totals {
+    border-top: 1px dashed #000;
+    padding-top: 6px;
+    margin-bottom: 8px;
+  }
+
+  .receipt-totals .row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .receipt-totals .row.grand {
+    font-weight: bold;
+    font-size: 13px;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 4px 0;
+    margin: 4px 0;
+  }
+
+  .receipt-footer {
+    text-align: center;
+    font-size: 9px;
+    border-top: 1px dashed #000;
+    padding-top: 8px;
+    margin-top: 6px;
+  }
+}

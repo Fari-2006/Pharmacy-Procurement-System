@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaFlow - Pharmacy Stock & POS Management System</title>
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-section">
+        <div class="brand-icon">
+          <i class="fa-solid fa-prescription-bottle-medical"></i>
+        </div>
+        <div class="brand-text">
+          <h2>PharmaFlow</h2>
+          <span>Stock & POS System</span>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li>
+          <a class="nav-item active" data-view="dashboard" data-role-required="admin,pharmacist">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="inventory" data-role-required="admin,pharmacist,cashier">
+            <i class="fa-solid fa-capsules"></i>
+            <span>Inventory & Batches</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="pos" data-role-required="admin,pharmacist,cashier">
+            <i class="fa-solid fa-cash-register"></i>
+            <span>Point of Sale (POS)</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="sales" data-role-required="admin,pharmacist,cashier">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>Sales & Invoices</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="suppliers" data-role-required="admin,pharmacist">
+            <i class="fa-solid fa-truck-field"></i>
+            <span>Suppliers Directory</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="users" data-role-required="admin">
+            <i class="fa-solid fa-users-gear"></i>
+            <span>Staff & Security</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="user-quick-profile">
+          <div class="user-avatar" id="userAvatarText">AD</div>
+          <div class="user-info">
+            <div class="name" id="headerUserName">Administrator</div>
+            <span class="role-badge role-admin" id="headerUserRole">ADMIN</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logoutBtn" title="Logout" style="padding:6px 8px; color:#ef4444; border:none; background:transparent;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Body -->
+    <main class="main-content">
+
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h1 class="page-title" id="headerPageTitle">Dashboard Overview</h1>
+        </div>
+
+        <div class="header-right">
+          <div class="date-time-display">
+            <i class="fa-regular fa-calendar-check"></i>
+            <span id="clockDisplay">Loading time...</span>
+          </div>
+
+          <button class="header-btn btn-alerts" id="headerAlertsBtn" title="View Expiry & Low Stock Alerts">
+            <i class="fa-solid fa-bell"></i>
+            <span>Alerts</span>
+            <span class="nav-badge" id="headerAlertsBadge" style="display:none;">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Views Container -->
+      <div class="view-container">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view-section active">
+          
+          <!-- Urgent Alert Banners -->
+          <div id="dashboardAlertsBanner" class="alerts-banner-container"></div>
+
+          <!-- KPI Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card info" onclick="window.appRouter.navigateTo('inventory')" style="cursor:pointer;">
+              <div class="metric-info">
+                <h3>Total Medicines</h3>
+                <div class="metric-value" id="metricTotalMedicines">0</div>
+                <div class="metric-sub">Catalog item count</div>
+              </div>
+              <div class="metric-icon icon-blue">
+                <i class="fa-solid fa-pills"></i>
+              </div>
+            </div>
+
+            <div class="metric-card success" onclick="window.appRouter.navigateTo('inventory')" style="cursor:pointer;">
+              <div class="metric-info">
+                <h3>Stock on Hand</h3>
+                <div class="metric-value" id="metricTotalUnits">0</div>
+                <div class="metric-sub">Total sellable units</div>
+              </div>
+              <div class="metric-icon icon-teal">
+                <i class="fa-solid fa-boxes-stacked"></i>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-info">
+                <h3>Inventory Cost Value</h3>
+                <div class="metric-value" id="metricCostValuation">$0.00</div>
+                <div class="metric-sub">At purchase/cost price</div>
+              </div>
+              <div class="metric-icon icon-green">
+                <i class="fa-solid fa-vault"></i>
+              </div>
+            </div>
+
+            <div class="metric-card" onclick="window.appRouter.navigateTo('sales')" style="cursor:pointer;">
+              <div class="metric-info">
+                <h3>Today's Sales</h3>
+                <div class="metric-value" id="metricTodaySales">$0.00</div>
+                <div class="metric-sub">Dispensed revenue today</div>
+              </div>
+              <div class="metric-icon icon-blue">
+                <i class="fa-solid fa-cash-register"></i>
+              </div>
+            </div>
+
+            <div class="metric-card warning cursor-pointer" onclick="alertsManager.openModal('low_stock')">
+              <div class="metric-info">
+                <h3>Low Stock Items</h3>
+                <div class="metric-value" id="metricLowStockCount">0</div>
+                <div class="metric-sub">Below reorder threshold</div>
+              </div>
+              <div class="metric-icon icon-yellow">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+            </div>
+
+            <div class="metric-card danger cursor-pointer" onclick="alertsManager.openModal('expiring')">
+              <div class="metric-info">
+                <h3>Near Expiry / Expired</h3>
+                <div class="metric-value" id="metricExpiringCount">0</div>
+                <div class="metric-sub">Requires FEFO or disposal</div>
+              </div>
+              <div class="metric-icon icon-red">
+                <i class="fa-solid fa-calendar-xmark"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard 2-Column Section -->
+          <div class="dashboard-grid">
+            
+            <!-- Left Column: Recent Sales & Stock Movements -->
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fa-solid fa-receipt"></i> Recent Dispensing Transactions
+                  </h3>
+                  <button class="btn btn-secondary btn-sm" onclick="window.appRouter.navigateTo('sales')">View All</button>
+                </div>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Amount</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardRecentSalesTable">
+                      <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Stock Movement & Audit Trail
+                  </h3>
+                </div>
+                <div id="dashboardAuditLogs">
+                  <p class="text-muted text-center py-3">Loading logs...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Quick Actions & Category Stock Distribution -->
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fa-solid fa-bolt"></i> Quick Operations
+                  </h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                  <button class="btn btn-primary" onclick="window.appRouter.navigateTo('pos')" style="justify-content:flex-start;">
+                    <i class="fa-solid fa-cash-register"></i> New Dispense / Sale (POS)
+                  </button>
+                  <button class="btn btn-secondary" onclick="inventory.openAddMedicineModal()" data-role-required="admin,pharmacist" style="justify-content:flex-start;">
+                    <i class="fa-solid fa-plus-circle"></i> Register New Medicine
+                  </button>
+                  <button class="btn btn-secondary" onclick="alertsManager.openModal()" style="justify-content:flex-start;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Check Expiry & Low Stock
+                  </button>
+                  <button class="btn btn-secondary" onclick="suppliersManager.openAddModal()" data-role-required="admin,pharmacist" style="justify-content:flex-start;">
+                    <i class="fa-solid fa-truck-medical"></i> Add Medicine Supplier
+                  </button>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fa-solid fa-layer-group"></i> Inventory By Category
+                  </h3>
+                </div>
+                <div id="dashboardCategoryList">
+                  <p class="text-muted text-center">Loading categories...</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 2. INVENTORY & BATCHES VIEW -->
+        <section id="view-inventory" class="view-section">
+          <div class="card">
+            
+            <div class="filter-bar">
+              <div class="filter-group">
+                <div class="search-input-wrapper">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="invSearchInput" placeholder="Search brand, generic name, or manufacturer...">
+                </div>
+
+                <select id="invCategoryFilter" class="select-control">
+                  <option value="All">All Categories</option>
+                  <option value="Antibiotics">Antibiotics</option>
+                  <option value="Analgesics / Pain Relief">Analgesics / Pain Relief</option>
+                  <option value="Cardiovascular">Cardiovascular</option>
+                  <option value="Antidiabetic">Antidiabetic</option>
+                  <option value="Gastrointestinal">Gastrointestinal</option>
+                  <option value="Respiratory / Anti-Allergy">Respiratory / Anti-Allergy</option>
+                  <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <select id="invStatusFilter" class="select-control">
+                  <option value="all">All Stock Statuses</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock (≤ Reorder)</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                </select>
+              </div>
+
+              <div data-role-required="admin,pharmacist">
+                <button class="btn btn-primary" onclick="inventory.openAddMedicineModal()">
+                  <i class="fa-solid fa-plus"></i> Add New Medicine
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Medicine & Generic</th>
+                    <th>Category</th>
+                    <th>Dosage / Strength</th>
+                    <th>Shelf Location</th>
+                    <th>Total Units</th>
+                    <th>Batches</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                  <tr><td colspan="8" class="text-center text-muted py-4">Loading inventory...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 3. POINT OF SALE (POS) VIEW -->
+        <section id="view-pos" class="view-section">
+          <div class="pos-layout">
+            
+            <!-- Left Column: Search & Medicine Selection -->
+            <div>
+              <div class="card" style="margin-bottom:0;">
+                <div class="card-header" style="margin-bottom:14px; padding-bottom:8px;">
+                  <h3 class="card-title">
+                    <i class="fa-solid fa-prescription-bottle"></i> Select Pharmaceutical Item
+                  </h3>
+                  <div style="font-size:0.8rem; color:var(--text-muted);">
+                    <i class="fa-solid fa-star" style="color:var(--primary);"></i> FEFO (First Expiring First Out) Active
+                  </div>
+                </div>
+
+                <div class="search-input-wrapper" style="width:100%; margin-bottom:16px;">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="posSearchInput" placeholder="Type medicine or chemical generic name to search...">
+                </div>
+
+                <div class="pos-search-list" id="posMedicineList">
+                  <p class="text-muted text-center py-4">Loading catalog...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Active Cart & Invoice Dispensing -->
+            <div>
+              <div class="pos-cart-panel">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <h3 style="font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-cart-shopping" style="color:var(--primary);"></i> Dispensing Invoice
+                  </h3>
+                  <button class="btn btn-secondary btn-sm" id="posClearCartBtn" style="color:var(--accent-danger);">
+                    <i class="fa-solid fa-trash-can"></i> Clear
+                  </button>
+                </div>
+
+                <!-- Customer Details -->
+                <div class="form-grid" style="gap:10px;">
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Customer Name</label>
+                    <input type="text" id="posCustomerName" class="input-control" placeholder="Walk-in Customer">
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" id="posCustomerPhone" class="input-control" placeholder="+1-555-0100">
+                  </div>
+                  <div class="form-group full-width" style="margin:0;">
+                    <label class="form-label">Prescribing Doctor (Optional)</label>
+                    <input type="text" id="posDoctorName" class="input-control" placeholder="Dr. Name / Clinic">
+                  </div>
+                </div>
+
+                <!-- Cart Items List -->
+                <div class="cart-items-wrapper" id="posCartItemsList">
+                  <p class="text-muted text-center py-4">No items added to invoice.</p>
+                </div>
+
+                <!-- Financial Breakdown -->
+                <div class="cart-totals">
+                  <div class="cart-total-row">
+                    <span>Subtotal:</span>
+                    <span id="posSubtotal">$0.00</span>
+                  </div>
+
+                  <div style="display:flex; gap:10px; align-items:center; margin: 4px 0;">
+                    <div style="flex:1;">
+                      <label style="font-size:0.75rem; color:var(--text-muted); display:block;">Discount (%)</label>
+                      <input type="number" id="posDiscountPercent" class="input-control" min="0" max="100" value="0" style="padding:4px 8px; font-size:0.85rem;">
+                    </div>
+                    <div style="flex:1;">
+                      <label style="font-size:0.75rem; color:var(--text-muted); display:block;">Tax / GST (%)</label>
+                      <input type="number" id="posTaxPercent" class="input-control" min="0" max="100" value="0" style="padding:4px 8px; font-size:0.85rem;">
+                    </div>
+                  </div>
+
+                  <div class="cart-total-row">
+                    <span>Discount:</span>
+                    <span id="posDiscountAmount" style="color:var(--accent-danger);">-$0.00</span>
+                  </div>
+                  <div class="cart-total-row">
+                    <span>Tax:</span>
+                    <span id="posTaxAmount">+$0.00</span>
+                  </div>
+
+                  <div class="cart-total-row grand-total">
+                    <span>Grand Total:</span>
+                    <span id="posGrandTotal" style="color:var(--primary);">$0.00</span>
+                  </div>
+                </div>
+
+                <!-- Payment Details -->
+                <div class="form-grid" style="gap:10px;">
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Payment Method</label>
+                    <select id="posPaymentMethod" class="select-control">
+                      <option value="cash">Cash</option>
+                      <option value="card">Credit / Debit Card</option>
+                      <option value="upi">UPI / Mobile Payment</option>
+                      <option value="insurance">Insurance Billing</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Tendered / Paid</label>
+                    <input type="number" id="posPaidAmount" class="input-control" placeholder="0.00" step="0.01">
+                  </div>
+                </div>
+
+                <div class="cart-total-row" style="font-size:0.9rem; font-weight:600;">
+                  <span>Change to Return:</span>
+                  <span id="posChangeAmount">$0.00</span>
+                </div>
+
+                <!-- Checkout Action Button -->
+                <button class="btn btn-primary" id="posCheckoutBtn" style="padding:14px; font-size:1rem; width:100%;" disabled>
+                  <i class="fa-solid fa-receipt"></i> Complete Sale & Dispense
+                </button>
+
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 4. SALES HISTORY & INVOICES VIEW -->
+        <section id="view-sales" class="view-section">
+          <div class="card">
+            
+            <div class="filter-bar">
+              <div class="filter-group">
+                <div class="search-input-wrapper">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="salesSearchInput" placeholder="Search invoice # or customer...">
+                </div>
+
+                <input type="date" id="salesStartDate" class="input-control" title="From Date">
+                <input type="date" id="salesEndDate" class="input-control" title="To Date">
+              </div>
+
+              <button class="btn btn-secondary" onclick="salesHistory.loadSales()">
+                <i class="fa-solid fa-arrow-rotate-right"></i> Refresh
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Grand Total</th>
+                    <th>Payment</th>
+                    <th>Dispensed By</th>
+                    <th>Date & Time</th>
+                    <th>Receipt</th>
+                  </tr>
+                </thead>
+                <tbody id="salesTableBody">
+                  <tr><td colspan="8" class="text-center text-muted py-4">Loading sales history...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 5. SUPPLIERS DIRECTORY VIEW -->
+        <section id="view-suppliers" class="view-section">
+          <div class="card">
+            
+            <div class="filter-bar">
+              <h3 class="card-title">
+                <i class="fa-solid fa-truck-field"></i> Pharmaceutical Suppliers & Manufacturers
+              </h3>
+              <div data-role-required="admin,pharmacist">
+                <button class="btn btn-primary" onclick="suppliersManager.openAddModal()">
+                  <i class="fa-solid fa-plus"></i> Add New Supplier
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Supplier Name</th>
+                    <th>Contact Person</th>
+                    <th>Contact Info</th>
+                    <th>Address</th>
+                    <th>Supplied Drug Categories</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="suppliersTableBody">
+                  <tr><td colspan="6" class="text-center text-muted py-4">Loading suppliers...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 6. STAFF & SECURITY (ADMIN ONLY) VIEW -->
+        <section id="view-users" class="view-section">
+          <div class="card">
+            
+            <div class="filter-bar">
+              <div>
+                <h3 class="card-title">
+                  <i class="fa-solid fa-users-gear"></i> System User Accounts & Roles
+                </h3>
+                <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                  Manage Admin, Pharmacist, and Cashier access privileges
+                </p>
+              </div>
+              <button class="btn btn-primary" onclick="usersManager.openAddModal()">
+                <i class="fa-solid fa-user-plus"></i> Add Staff Account
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Full Name</th>
+                    <th>Email Address</th>
+                    <th>Role</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                  <tr><td colspan="6" class="text-center text-muted py-4">Loading staff accounts...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. LOGIN MODAL -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="brand-icon" style="width:34px; height:34px; font-size:16px;">
+            <i class="fa-solid fa-prescription-bottle-medical"></i>
+          </div>
+          <h3 style="font-size:1.1rem;">Pharmacy Portal Login</h3>
+        </div>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Quick Demo Switcher -->
+        <div class="demo-login-bar">
+          <p><i class="fa-solid fa-wand-magic-sparkles"></i> <strong>Quick One-Click Demo Login:</strong></p>
+          <div class="demo-buttons-row">
+            <button type="button" class="btn btn-secondary btn-sm btn-demo-login" data-role="admin">
+              <i class="fa-solid fa-shield"></i> Admin
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-demo-login" data-role="pharmacist">
+              <i class="fa-solid fa-user-doctor"></i> Pharmacist
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-demo-login" data-role="cashier">
+              <i class="fa-solid fa-cash-register"></i> Cashier
+            </button>
+          </div>
+        </div>
+
+        <div id="loginAlertMsg" class="alert-banner critical" style="display:none; margin-bottom:16px;"></div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label">Email Address <span class="req">*</span></label>
+            <input type="email" id="loginEmail" class="input-control" placeholder="name@pharmacy.com" required value="admin@pharmacy.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password <span class="req">*</span></label>
+            <input type="password" id="loginPassword" class="input-control" placeholder="••••••••" required value="Admin@123">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px; padding:12px;">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PRINTABLE RECEIPT MODAL -->
+  <div class="modal-overlay" id="receiptModal">
+    <div class="modal-box" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-receipt"></i> Dispensing Receipt</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="background:#f8fafc; padding:16px;">
+        <!-- Printable Receipt Content -->
+        <div id="printableReceipt" style="background:white; border:1px solid #e2e8f0; padding:20px; border-radius:8px; box-shadow:var(--shadow-sm);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-modal-cancel">Close</button>
+        <button class="btn btn-primary" onclick="pos.printReceipt()">
+          <i class="fa-solid fa-print"></i> Print Invoice / Thermal Receipt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. VIEW BATCHES MODAL -->
+  <div class="modal-overlay" id="viewBatchesModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="batchModalMedName">Medicine Batches</h3>
+          <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+            Current Total Active Stock: <strong id="batchModalTotalStock" style="color:var(--primary);">0</strong>
+          </div>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Batch #</th>
+                <th>Expiry Date</th>
+                <th>Cost Price</th>
+                <th>Selling Price</th>
+                <th>Units (Available / Initial)</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="batchesModalTableBody">
+              <tr><td colspan="7" class="text-center text-muted">Loading batches...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-modal-cancel">Close</button>
+        <button class="btn btn-primary" onclick="inventory.openAddBatchModal(inventory.selectedMedicine?._id)">
+          <i class="fa-solid fa-plus"></i> Add Stock to this Medicine
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. ADD MEDICINE MODAL -->
+  <div class="modal-overlay" id="addMedicineModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-capsules"></i> Register New Pharmaceutical</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="addMedicineForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Brand / Commercial Name <span class="req">*</span></label>
+              <input type="text" id="addMedName" class="input-control" placeholder="e.g. Amoxicillin 500mg" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Generic Chemical Name <span class="req">*</span></label>
+              <input type="text" id="addMedGeneric" class="input-control" placeholder="e.g. Amoxicillin Trihydrate" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drug Category <span class="req">*</span></label>
+              <select id="addMedCategory" class="select-control" required>
+                <option value="Antibiotics">Antibiotics</option>
+                <option value="Analgesics / Pain Relief">Analgesics / Pain Relief</option>
+                <option value="Antipyretics">Antipyretics</option>
+                <option value="Cardiovascular">Cardiovascular</option>
+                <option value="Antidiabetic">Antidiabetic</option>
+                <option value="Gastrointestinal">Gastrointestinal</option>
+                <option value="Respiratory / Anti-Allergy">Respiratory / Anti-Allergy</option>
+                <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                <option value="Dermatology / Topical">Dermatology / Topical</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dosage Form</label>
+              <select id="addMedDosage" class="select-control">
+                <option value="Tablet">Tablet</option>
+                <option value="Capsule">Capsule</option>
+                <option value="Syrup">Syrup</option>
+                <option value="Injection">Injection</option>
+                <option value="Ointment">Ointment</option>
+                <option value="Inhaler">Inhaler</option>
+                <option value="Drops">Drops</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Strength / Concentration</label>
+              <input type="text" id="addMedStrength" class="input-control" placeholder="e.g. 500 mg, 100 ml">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Manufacturer / Lab</label>
+              <input type="text" id="addMedManufacturer" class="input-control" placeholder="e.g. Pfizer, GSK">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dispensing Unit</label>
+              <select id="addMedUnit" class="select-control">
+                <option value="Tablets">Tablets</option>
+                <option value="Strips">Strips</option>
+                <option value="Bottles">Bottles</option>
+                <option value="Boxes">Boxes</option>
+                <option value="Vials">Vials</option>
+                <option value="Tubes">Tubes</option>
+                <option value="Inhalers">Inhalers</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reorder Level (Low Stock Threshold)</label>
+              <input type="number" id="addMedReorder" class="input-control" value="20" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Storage Rack / Shelf Location</label>
+              <input type="text" id="addMedRack" class="input-control" placeholder="e.g. Shelf A-3, Cold Storage">
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; flex-direction:row; gap:8px; margin-top:28px;">
+              <input type="checkbox" id="addMedPrescription" style="width:18px; height:18px;">
+              <label for="addMedPrescription" class="form-label" style="cursor:pointer; margin:0;">Requires Doctor Prescription</label>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Clinical Indications / Notes</label>
+              <textarea id="addMedDesc" class="input-control" placeholder="Optional clinical notes or directions..."></textarea>
+            </div>
+
+            <!-- Optional Initial Batch -->
+            <div class="form-group full-width" style="margin-top:10px; border-top:1px dashed var(--border-color); padding-top:16px;">
+              <h4 style="font-size:0.95rem; margin-bottom:12px; color:var(--primary);">
+                <i class="fa-solid fa-boxes-packing"></i> Optional: Add Initial Stock Batch
+              </h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Batch Number</label>
+                  <input type="text" id="addMedBatchNum" class="input-control" placeholder="e.g. BATCH-2026-01">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Expiry Date</label>
+                  <input type="date" id="addMedBatchExp" class="input-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cost Price ($ per unit)</label>
+                  <input type="number" id="addMedBatchCost" class="input-control" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Selling Price ($ per unit)</label>
+                  <input type="number" id="addMedBatchPrice" class="input-control" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Quantity</label>
+                  <input type="number" id="addMedBatchQty" class="input-control" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Supplier</label>
+                  <select id="addMedSupplier" class="select-control"></select>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Medicine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. EDIT MEDICINE MODAL -->
+  <div class="modal-overlay" id="editMedicineModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square"></i> Edit Medicine Details</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="editMedicineForm">
+        <input type="hidden" id="editMedId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Brand Name <span class="req">*</span></label>
+              <input type="text" id="editMedName" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Generic Name <span class="req">*</span></label>
+              <input type="text" id="editMedGeneric" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drug Category</label>
+              <select id="editMedCategory" class="select-control">
+                <option value="Antibiotics">Antibiotics</option>
+                <option value="Analgesics / Pain Relief">Analgesics / Pain Relief</option>
+                <option value="Antipyretics">Antipyretics</option>
+                <option value="Cardiovascular">Cardiovascular</option>
+                <option value="Antidiabetic">Antidiabetic</option>
+                <option value="Gastrointestinal">Gastrointestinal</option>
+                <option value="Respiratory / Anti-Allergy">Respiratory / Anti-Allergy</option>
+                <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                <option value="Dermatology / Topical">Dermatology / Topical</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dosage Form</label>
+              <select id="editMedDosage" class="select-control">
+                <option value="Tablet">Tablet</option>
+                <option value="Capsule">Capsule</option>
+                <option value="Syrup">Syrup</option>
+                <option value="Injection">Injection</option>
+                <option value="Ointment">Ointment</option>
+                <option value="Inhaler">Inhaler</option>
+                <option value="Drops">Drops</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Strength</label>
+              <input type="text" id="editMedStrength" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Manufacturer</label>
+              <input type="text" id="editMedManufacturer" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit</label>
+              <select id="editMedUnit" class="select-control">
+                <option value="Tablets">Tablets</option>
+                <option value="Strips">Strips</option>
+                <option value="Bottles">Bottles</option>
+                <option value="Boxes">Boxes</option>
+                <option value="Vials">Vials</option>
+                <option value="Tubes">Tubes</option>
+                <option value="Inhalers">Inhalers</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reorder Level</label>
+              <input type="number" id="editMedReorder" class="input-control" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shelf Location</label>
+              <input type="text" id="editMedRack" class="input-control">
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; flex-direction:row; gap:8px; margin-top:28px;">
+              <input type="checkbox" id="editMedPrescription" style="width:18px; height:18px;">
+              <label for="editMedPrescription" class="form-label" style="cursor:pointer; margin:0;">Requires Prescription</label>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Description / Instructions</label>
+              <textarea id="editMedDesc" class="input-control"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Medicine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. ADD BATCH MODAL -->
+  <div class="modal-overlay" id="addBatchModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3><i class="fa-solid fa-boxes-packing"></i> Add Batch & Receive Stock</h3>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+            Target: <strong id="addBatchMedName" style="color:var(--text-main);"></strong>
+          </p>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="addBatchForm">
+        <input type="hidden" id="addBatchMedId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Batch Number <span class="req">*</span></label>
+              <input type="text" id="addBatchNumber" class="input-control" placeholder="e.g. AMX-2026-C3" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expiry Date <span class="req">*</span></label>
+              <input type="date" id="addBatchExp" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Manufacturing Date</label>
+              <input type="date" id="addBatchMfg" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Units Received / Quantity <span class="req">*</span></label>
+              <input type="number" id="addBatchQty" class="input-control" min="1" placeholder="e.g. 100" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cost / Purchase Price ($) <span class="req">*</span></label>
+              <input type="number" id="addBatchCost" class="input-control" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Selling Price ($) <span class="req">*</span></label>
+              <input type="number" id="addBatchPrice" class="input-control" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Supplier Source</label>
+              <select id="addBatchSupplier" class="select-control"></select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Receive Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. ADJUST STOCK MODAL -->
+  <div class="modal-overlay" id="adjustStockModal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <div>
+          <h3><i class="fa-solid fa-sliders"></i> Stock Adjustment</h3>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+            Batch: <strong id="adjustBatchNumber"></strong> &bull; Current Units: <strong id="adjustCurrentQty" style="color:var(--primary);"></strong>
+          </p>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="adjustForm">
+        <input type="hidden" id="adjustMedId">
+        <input type="hidden" id="adjustBatchId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Adjustment Type <span class="req">*</span></label>
+            <select id="adjustType" class="select-control" required>
+              <option value="deduct">Deduct Units (Disposal, Damage, Expired)</option>
+              <option value="add">Add Units (Found Stock, Return)</option>
+              <option value="set">Set Exact Count (Physical Inventory Audit)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantity <span class="req">*</span></label>
+            <input type="number" id="adjustQty" class="input-control" min="0" required placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Audit Reason / Justification <span class="req">*</span></label>
+            <input type="text" id="adjustReason" class="input-control" placeholder="e.g. Expired stock quarantined, broken bottle, inventory audit" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. ADD/EDIT SUPPLIER MODALS -->
+  <div class="modal-overlay" id="addSupplierModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-truck-field"></i> Register Supplier</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="addSupplierForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Supplier / Company Name <span class="req">*</span></label>
+              <input type="text" id="addSupplierName" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Person</label>
+              <input type="text" id="addSupplierContact" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="addSupplierEmail" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input type="text" id="addSupplierPhone" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Address</label>
+              <input type="text" id="addSupplierAddress" class="input-control">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Supplied Categories (Comma-separated)</label>
+              <input type="text" id="addSupplierCategories" class="input-control" placeholder="Antibiotics, Analgesics, Cardiovascular">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Notes</label>
+              <textarea id="addSupplierNotes" class="input-control"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Supplier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editSupplierModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square"></i> Edit Supplier</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="editSupplierForm">
+        <input type="hidden" id="editSupplierId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Supplier Name <span class="req">*</span></label>
+              <input type="text" id="editSupplierName" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Person</label>
+              <input type="text" id="editSupplierContact" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="editSupplierEmail" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input type="text" id="editSupplierPhone" class="input-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Address</label>
+              <input type="text" id="editSupplierAddress" class="input-control">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Supplied Categories</label>
+              <input type="text" id="editSupplierCategories" class="input-control">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Notes</label>
+              <textarea id="editSupplierNotes" class="input-control"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Supplier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. ADD/EDIT USER MODALS (ADMIN ONLY) -->
+  <div class="modal-overlay" id="addUserModal">
+    <div class="modal-box" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus"></i> Add Staff Account</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="addUserForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Full Name <span class="req">*</span></label>
+            <input type="text" id="addUserName" class="input-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address <span class="req">*</span></label>
+            <input type="email" id="addUserEmail" class="input-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password <span class="req">*</span></label>
+            <input type="password" id="addUserPassword" class="input-control" minlength="6" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role <span class="req">*</span></label>
+            <select id="addUserRole" class="select-control" required>
+              <option value="pharmacist">Pharmacist (Inventory, Batches, Suppliers & Sales)</option>
+              <option value="cashier">Cashier (Point of Sale & Dispensing)</option>
+              <option value="admin">Administrator (Full Control)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="text" id="addUserPhone" class="input-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editUserModal">
+    <div class="modal-box" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen"></i> Edit Staff Account</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="editUserForm">
+        <input type="hidden" id="editUserId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="editUserName" class="input-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="editUserEmail" class="input-control" disabled style="background:#f1f5f9;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select id="editUserRole" class="select-control">
+              <option value="pharmacist">Pharmacist</option>
+              <option value="cashier">Cashier</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" id="editUserPhone" class="input-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reset Password (Optional)</label>
+            <input type="password" id="editUserPassword" class="input-control" placeholder="Leave blank to keep current">
+          </div>
+          <div class="form-group" style="display:flex; align-items:center; flex-direction:row; gap:8px;">
+            <input type="checkbox" id="editUserActive" style="width:18px; height:18px;">
+            <label for="editUserActive" class="form-label" style="cursor:pointer; margin:0;">Account Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Staff Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. ALERTS MODAL -->
+  <div class="modal-overlay" id="alertsModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-warning);"></i> Expiry & Low Stock Alerts</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="alertsModalContent">
+        <p class="text-center text-muted py-4">Checking inventory status...</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-modal-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/pos.js"></script>
+  <script src="js/sales.js"></script>
+  <script src="js/suppliers.js"></script>
+  <script src="js/users.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
