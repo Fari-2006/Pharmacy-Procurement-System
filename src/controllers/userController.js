@@ -122,12 +122,12 @@ const updateUser = async (req, res, next) => {
       user.supplierCompany = supplierCompany;
     }
     if (phone !== undefined) user.phone = phone;
-    if (isActive !== undefined) user.isActive = isActive;
+    if (isActive !== undefined) {user.isActive = isActive;if(isActive===true && user.registrationStatus==='pending') user.registrationStatus='approved';}
     if (password && password.trim().length >= 6) {
       user.password = password;
     }
 
-    if (user.role === 'supplier' && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
+    if (user.role === 'supplier' && user.isActive && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany,isActive:{$ne:false}}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
     await user.save();
 
     await AuditLog.create({
@@ -177,7 +177,8 @@ const deleteUser = async (req, res, next) => {
     }
 
     user.isActive = false;
-    if (user.role === 'supplier' && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
+    if(user.registrationStatus==='pending')user.registrationStatus='rejected';
+    if (user.role === 'supplier' && user.isActive && (!user.supplierCompany || !await Supplier.exists({_id:user.supplierCompany,isActive:{$ne:false}}))) return res.status(400).json({success:false,message:'Select a valid supplier company.'});
     await user.save();
 
     await AuditLog.create({

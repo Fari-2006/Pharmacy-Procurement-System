@@ -16,6 +16,23 @@ async function call(role,path,method='GET',body,status=200){const r=await fetch(
  for(const M of [User,Supplier,Medicine,PO,GR,Return,Invoice,Notification])await M.init();
  server=spawn(process.execPath,['server.js'],{env:{...process.env,MONGODB_URI:uri,PORT:'5127',NODE_ENV:'test'},stdio:['ignore','pipe','pipe']});let logs='';server.stderr.on('data',b=>logs+=b);server.stdout.on('data',b=>logs+=b);base='http://127.0.0.1:5127';
  for(let i=0;i<100;i++){try{await fetch(base+'/api/health');break}catch{await new Promise(r=>setTimeout(r,100))}}
+ const signup={name:'Applicant',email:'applicant@test.com',password:'Applicant@123',role:'pharmacist',isActive:true,supplierCompany:sa.id};
+ const registered=await call('','/auth/register','POST',signup,201);ok('registration does not issue a token',!registered.token);
+ const applicant=await User.findOne({email:signup.email});ok('registration cannot self-activate or link a company',!applicant.isActive&&applicant.supplierCompany===null&&applicant.registrationStatus==='pending');
+ await call('','/auth/register','POST',signup,409);
+ await call('','/auth/register','POST',{...signup,email:'admin.request@test.com',role:'admin'},400);
+ await call('','/auth/register','POST',{...signup,email:'short@test.com',password:'short'},400);
+ await call('','/auth/login','POST',{email:signup.email,password:signup.password},403);
+ await call('cashier','/users/'+applicant.id,'PUT',{isActive:true},403);
+ await call('admin','/users/'+applicant.id,'PUT',{isActive:true});
+ ok('admin approves registration',(await User.findById(applicant.id)).registrationStatus==='approved');
+ await call('','/auth/login','POST',{email:signup.email,password:signup.password});
+ await call('','/auth/register','POST',{...signup,email:'supplier.request@test.com',role:'supplier'},400);
+ await call('','/auth/register','POST',{...signup,email:'supplier.request@test.com',role:'supplier',companyName:'Requested Company'},201);
+ const supplierRequest=await User.findOne({email:'supplier.request@test.com'});
+ await call('admin','/users/'+supplierRequest.id,'PUT',{isActive:true},400);
+ await call('admin','/users/'+supplierRequest.id,'PUT',{isActive:true,supplierCompany:sa.id});
+ ok('supplier activation requires admin company link',(await call('','/auth/login','POST',{email:'supplier.request@test.com',password:signup.password})).user.role==='supplier');
  for(const role of ['admin','pharmacist','cashier','supplier']){const d=await call('', '/auth/login','POST',{email:role+'@test.com',password:'Test@123'});ok(role+' login',d.token);}
  for(const path of ['/purchase-orders','/goods-receipts','/returns','/supplier-invoices','/suppliers'])await call('cashier',path,'GET',undefined,403);
  for(const path of ['/sales','/dashboard/stats','/medicines'])await call('supplier',path,'GET',undefined,403);

@@ -22,6 +22,13 @@ app.use(express.urlencoded({ extended: true }));
 // Enable CORS
 app.use(cors());
 
+// Public entry pages are separate from the authenticated workspace.
+app.get(['/', '/home'], (req,res) => res.sendFile(path.join(__dirname,'public','home.html')));
+app.get('/login', (req,res) => res.sendFile(path.join(__dirname,'public','login.html')));
+app.get(['/register','/registration'], (req,res) => res.sendFile(path.join(__dirname,'public','register.html')));
+app.get('/app', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
+app.get('/index.html', (req,res) => res.redirect('/app'));
+
 // Serve Static Frontend Assets
 app.use(express.static(path.join(__dirname, 'public')));
 

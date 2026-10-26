@@ -31,6 +31,8 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'pharmacist', 'cashier', 'supplier'],
       default: 'pharmacist'
     },
+    registrationStatus: {type:String, enum:['pending','approved','rejected'], default:'approved'},
+    requestedCompanyName: {type:String, trim:true, maxlength:150},
     supplierCompany: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Supplier',

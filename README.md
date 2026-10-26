@@ -24,6 +24,15 @@ NODE_ENV=development
 
 Run `npm run dev`, then open http://localhost:5000. Express serves the frontend; a separate Live Server is unnecessary.
 
+## Home, registration and login
+
+- `/` or `/home`: public home page with features, role overview, Login and Register links.
+- `/register`: submit a registration request as Pharmacist, Cashier or Supplier. Suppliers provide their company name. Public registration cannot create an admin account, activate itself or claim an existing supplier company.
+- `/login`: a separate login page for all four roles. No popup login or demo-login bar. The account role determines the dashboard after login.
+- `/app`: the authenticated pharmacy workspace. The browser verifies the session before displaying it; missing or expired sessions return to Login. Backend APIs continue to enforce authorization.
+
+New registrations remain inactive until reviewed. Admin → Staff & Security → Edit the pending account → verify details → select/link the supplier company when applicable → enable Account Active → save. Create a supplier company in Suppliers Directory first if it does not exist. The applicant can then log in with the password they registered. Existing accounts continue to work. Administrator accounts are created by an existing admin (or the development seed for initial local setup).
+
 ## Existing local MongoDB on Windows
 
 Receiving, returns, credits and POS checkout use multi-document transactions. A standalone database returns a clear 503 **before any stock changes**; there is no unsafe sequential fallback.
@@ -71,7 +80,7 @@ Seeding is refused unless `NODE_ENV=development`. Existing users, passwords, inv
 | BioCare supplier | supplier.biocare@pharmacy.com | BioCare@123 |
 | NovaCare supplier | supplier.nova@pharmacy.com | Nova@123 |
 
-Existing passwords are never reset by seeding. Demo shortcuts appear only in development. Use your own accounts and passwords outside development.
+Existing passwords are never reset by seeding. Public login pages use manual credentials; demo shortcut buttons have been removed. Use your own accounts and passwords outside development.
 
 ## Role workflows
 

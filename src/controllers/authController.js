@@ -27,7 +27,7 @@ const login = async (req, res, next) => {
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        message: 'Account is deactivated. Please contact an administrator.'
+        message: user.registrationStatus === 'pending' ? 'Your registration is pending admin approval.' : 'Account is inactive. Please contact an administrator.'
       });
     }
 
@@ -114,4 +114,22 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { login, getMe, changePassword };
+// Public requests cannot choose administrator privileges or attach themselves to a supplier.
+const register = async (req,res,next) => {
+  try {
+    const {name,email,password,phone,role,companyName}=req.body;
+    if(typeof name!=='string'||!name.trim()||typeof email!=='string'||typeof password!=='string') return res.status(400).json({success:false,message:'Full name, email and password are required.'});
+    if(!['pharmacist','cashier','supplier'].includes(role)) return res.status(400).json({success:false,message:'Choose Pharmacist, Cashier or Supplier. Admin accounts are managed by an administrator.'});
+    if(password.length<8||password.length>128) return res.status(400).json({success:false,message:'Password must contain 8–128 characters.'});
+    if(role==='supplier' && (typeof companyName!=='string'||!companyName.trim())) return res.status(400).json({success:false,message:'Supplier company name is required.'});
+    await User.init();
+    const normalized=email.trim().toLowerCase();
+    if(await User.exists({email:normalized})) return res.status(409).json({success:false,message:'This email is already registered. Please log in or contact your administrator.'});
+    const user=await User.create({name:name.trim(),email:normalized,password,phone:typeof phone==='string'?phone.trim():'',role,isActive:false,registrationStatus:'pending',requestedCompanyName:role==='supplier'?companyName.trim():undefined,supplierCompany:null});
+    await require('./notificationController').sendNotification({recipientRole:'admin',title:'New registration request',message:`${user.name} requested ${role} access. Review in Staff & Security.`,link:'users',type:'approval'});
+    await require('../models/AuditLog').create({user:user._id,userName:user.name,userRole:user.role,action:'USER_MANAGEMENT',details:'New registration request for '+user.email+' ('+role+')'});
+    res.status(201).json({success:true,message:'Registration submitted successfully. The pharmacy administrator will review your request before you can log in.'});
+  } catch(error) {if(error.code===11000)return res.status(409).json({success:false,message:'This email is already registered.'});next(error);}
+};
+
+module.exports = { login, register, getMe, changePassword };
