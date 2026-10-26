@@ -152,16 +152,18 @@
  const oldLogout=auth.logout.bind(auth);auth.logout=()=>{dialog.close();document.querySelectorAll('.view-section').forEach(n=>n.innerHTML=n.id.startsWith('view-')&&views[n.id.slice(5)]?'':n.innerHTML);oldLogout()};
  const setupSupplierUsers=()=>{
   for(const prefix of ['add','edit']){
-   const role=document.getElementById(prefix+'UserRole');role.add(new Option('Supplier','supplier'));
-   role.parentElement.insertAdjacentHTML('afterend',`<div class="form-group" id="${prefix}UserCompanyField" hidden><label class="form-label">${prefix==='edit'?'Registered Company':'Company Name'}</label><input id="${prefix}UserCompanyName" class="input-control" maxlength="120" ${prefix==='edit'?'readonly':''} placeholder="Enter company name"><small>${prefix==='edit'?'The company entered at registration is linked automatically on approval.':'Enter any supplier company name. A directory record is created if needed.'}</small></div>`);
-   role.addEventListener('change',()=>{document.getElementById(prefix+'UserCompanyField').hidden=role.value!=='supplier'});
+   document.getElementById(prefix+'UserRole').add(new Option('Supplier','supplier'));
   }
-  const add=usersManager.openAddModal.bind(usersManager);usersManager.openAddModal=()=>{add();document.getElementById('addUserCompanyField').hidden=document.getElementById('addUserRole').value!=='supplier'};
-  const edit=usersManager.openEditModal.bind(usersManager);usersManager.openEditModal=id=>{edit(id);const user=usersManager.users.find(u=>u._id===id);document.getElementById('editUserCompanyName').value=user?.supplierCompany?.name||user?.requestedCompanyName||'';document.getElementById('editUserCompanyField').hidden=user?.role!=='supplier'};
+  // Company entry is only needed when the admin creates a brand-new supplier account.
+  // Editing/approving an account uses the company already stored at registration.
+  const role=document.getElementById('addUserRole');
+  role.parentElement.insertAdjacentHTML('afterend',`<div class="form-group" id="addUserCompanyField" style="display:none"><label class="form-label">Company Name</label><input id="addUserCompanyName" class="input-control" maxlength="120" placeholder="Enter company name"><small>Enter any supplier company name. A directory record is created if needed.</small></div>`);
+  const sync=()=>{document.getElementById('addUserCompanyField').style.display=role.value==='supplier'?'':'none'};
+  role.addEventListener('change',sync);
+  const add=usersManager.openAddModal.bind(usersManager);usersManager.openAddModal=()=>{add();sync()};
  };
  setupSupplierUsers();
- const post=api.post.bind(api),put=api.put.bind(api);api.post=(path,body)=>post(path,path==='/users'?{...body,companyName:document.getElementById('addUserCompanyName').value}:body);
- api.put=(path,body)=>put(path,path.startsWith('/users/')?{...body,companyName:document.getElementById('editUserCompanyName').value}:body);
+ const post=api.post.bind(api);api.post=(path,body)=>post(path,path==='/users'?{...body,companyName:document.getElementById('addUserCompanyName').value}:body);
  const bell=button('Notifications',()=>appRouter.navigateTo('notifications'));bell.dataset.roleRequired='admin,pharmacist,supplier';document.querySelector('.header-right').append(bell);
  const poll=async()=>{if(!api.getToken()||!auth.currentUser||auth.currentUser.role==='cashier')return;try{const r=await api.get('/notifications?limit=1');bell.textContent=`Notifications (${r.unreadCount})`}catch{}};
  P.notificationTimer=setInterval(poll,20000);window.addEventListener('auth:login_success',poll);
